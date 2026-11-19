@@ -1,0 +1,2 @@
+* text=auto eol=lf
+samples/RUSTSEC-2020-0071.json -text

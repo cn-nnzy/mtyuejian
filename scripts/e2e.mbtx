@@ -1,0 +1,59 @@
+----
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/async/shell",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+async fn run(target : String, args : Array[String], expected : Int) -> @shell.Output {
+  let result = @shell.Cmd("moon", ["run", "--target", target, "--deny-warn", "lib/cli", "--"] + args).output(timeout_ms=120000)
+  if result.exit_code() != expected {
+    fail("CLI \{Repr(args)} exited \{result.exit_code()}, expected \{expected}: \{result.stderr()}")
+  }
+  if expected == 2 {
+    guard @json.parse(result.stderr()) is { "code": String(_), "path": String(_), "message": String(_), .. } else { fail("unstructured diagnostic") }
+    assert_eq(result.stdout(), "")
+  } else if args[0] != "snapshot" && args[0] != "help" {
+    guard @json.parse(result.stdout()) is { "exit_code": Number(code, ..), .. } && code == expected.to_double() else { fail("exit code disagrees with report") }
+  }
+  result
+}
+
+async fn main {
+  let target = @env.args().get(1).unwrap_or("wasm")
+  let advisory = "samples/RUSTSEC-2020-0071.json"
+  let direct = run(target, ["check", "samples/installed.json", advisory], 1)
+  let report = @json.parse(direct.stdout())
+  guard report is { "decisions": Array([
+    { "outcome": String(before), .. }, { "outcome": String(after), .. }
+  ]), .. } else { fail("real advisory decisions missing") }
+  assert_eq(before, "affected")
+  assert_eq(after, "not_matched")
+  run(target, ["check", "samples/fixed.json", advisory], 0) |> ignore
+  run(target, ["check", "samples/unknown.json", advisory], 3) |> ignore
+  run(target, ["check", "samples/installed.json", advisory, advisory], 2) |> ignore
+  run(target, ["check", "samples/missing.json", advisory], 2) |> ignore
+  run(target, ["check", "samples/installed.json"], 2) |> ignore
+  run(target, ["help"], 0) |> ignore
+  let snap = run(target, ["snapshot", advisory], 0)
+  let temp = "_build/yuejian-e2e-" + @env.now().to_string()
+  @fs.mkdir(temp)
+  defer @fs.rmdir(temp)
+  let path = temp + "/snapshot.json"
+  @fs.write_file(path, @utf8.encode(snap.stdout()))
+  defer @fs.remove(path)
+  let replay = run(target, ["replay", "samples/installed.json", path], 1)
+  assert_eq(direct.stdout(), replay.stdout())
+  run(target, ["replay", "samples/fixed.json", path], 0) |> ignore
+  @fs.write_file(path, b"{\"schema_version\":1,\"documents\":[],\"typo\":true}")
+  run(target, ["replay", "samples/fixed.json", path], 2) |> ignore
+  @fs.write_file(path, b"\xff")
+  run(target, ["replay", "samples/fixed.json", path], 2) |> ignore
+  @fs.write_file(path, @utf8.encode(snap.stdout()))
+  run(target, ["replay", "samples/fixed.json", path], 0) |> ignore
+  println("13 end-to-end scenarios passed on \{target}; real advisory, replay, rejection and recovery verified")
+}

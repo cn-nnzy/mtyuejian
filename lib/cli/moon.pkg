@@ -1,0 +1,13 @@
+import {
+  "cn-nnzy/mtyuejian" @audit,
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/async/stdio",
+  "moonbitlang/core/buffer",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+}
+
+supported_targets = "+wasm+native"
+
+pkgtype(kind: "executable")

@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "packages": [
+    {"id": "time-before-fix", "ecosystem": "crates.io", "name": "time", "version": "0.2.22"},
+    {"id": "time-fix-boundary", "ecosystem": "crates.io", "name": "time", "version": "0.2.23"}
+  ]
+}

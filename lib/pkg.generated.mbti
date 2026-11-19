@@ -1,0 +1,66 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "cn-nnzy/mtyuejian"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn assess(Snapshot, ArrayView[Package]) -> Assessment raise InputError
+
+pub fn inventory_json(ArrayView[Package]) -> @json.Json raise InputError
+
+pub fn read_advisory(String, origin? : String) -> Advisory raise InputError
+
+pub fn read_inventory(String) -> Array[Package] raise InputError
+
+pub fn read_snapshot(String) -> Snapshot raise InputError
+
+// Errors
+pub(all) suberror InputError {
+  Invalid(code~ : String, path~ : String, message~ : String)
+}
+pub fn InputError::to_json(Self) -> @json.Json
+
+// Types and methods
+pub struct Advisory {
+  // private fields
+}
+pub fn Advisory::id(Self) -> String
+pub fn Advisory::source(Self) -> String
+
+pub struct Assessment {
+  // private fields
+}
+pub fn Assessment::exit_code(Self) -> Int32
+pub fn Assessment::outcomes(Self) -> Array[Outcome]
+pub fn Assessment::to_json(Self) -> @json.Json
+
+#derive(Eq, @debug.Debug)
+pub(all) enum Outcome {
+  Affected
+  NotMatched
+  Undetermined
+  Withdrawn
+  NoAdvisory
+}
+pub fn Outcome::equal(Self, Self) -> Bool
+pub fn Outcome::not_equal(Self, Self) -> Bool
+pub fn Outcome::to_repr(Self) -> @debug.Repr
+
+pub struct Package {
+  // private fields
+}
+pub fn Package::new(id~ : String, ecosystem~ : String, name~ : String, version~ : String) -> Self raise InputError
+pub fn Package::to_json(Self) -> @json.Json
+
+pub struct Snapshot {
+  // private fields
+}
+pub fn Snapshot::new(ArrayView[Advisory]) -> Self raise InputError
+pub fn Snapshot::to_json(Self) -> @json.Json
+
+// Type aliases
+
+// Traits
