@@ -16,10 +16,13 @@
   source is bundled.
 - Runtime dependency `moonbitlang/async@0.22.10`: Apache-2.0,
   https://github.com/moonbitlang/async. Used by the file CLI and automation;
-  the library package itself imports only the MoonBit core library.
+  the library package does not import the async runtime.
 - MoonBit core library: Apache-2.0,
   https://github.com/moonbitlang/core. JSON string decoding/encoding, collections
   and test facilities are reused through imports, not vendored source.
+- `moonbitlang/x@0.5.7`: Apache-2.0, https://github.com/moonbitlang/x.
+  Its crypto package computes SHA-256 for assessment deliveries. The digest is
+  framing/integrity evidence, not a signature or publisher-authentication claim.
 - Apache-2.0 license text: https://www.apache.org/licenses/LICENSE-2.0.txt.
 
 GitHub Actions uses actions/checkout (MIT) and ilammy/msvc-dev-cmd (MIT) by

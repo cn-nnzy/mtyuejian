@@ -1,4 +1,7 @@
 import {
+  "moonbitlang/x/crypto",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/encoding/hex",
   "moonbitlang/core/json",
   "moonbitlang/core/debug",
 }

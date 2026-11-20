@@ -110,7 +110,7 @@ not verified provenance. There is no signature or tamper-detection claim.
 | Events per range | 4,096 |
 | Enumerated versions per affected entry | 8,192 |
 | Aliases per document | 128 |
-| CLI file byte size | 4 MiB |
+| CLI file byte size | 8 MiB |
 
 The CLI requires strict UTF-8 JSON without a BOM and reads bounded chunks. No
 input file is rewritten. All input failures return structured diagnostics and

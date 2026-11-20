@@ -20,11 +20,11 @@ async fn read_file(path : String) -> String {
         )
     }
     guard chunk is Some(chunk) else { break }
-    if buffer.length() + chunk.length() > 4194304 {
+    if buffer.length() + chunk.length() > 8388608 {
       raise @audit.Invalid(
         code="file-limit",
         path~,
-        message="Input exceeds 4 MiB",
+        message="Input exceeds 8 MiB",
       )
     }
     buffer.write_bytes(chunk)
@@ -46,6 +46,8 @@ fn usage() -> String {
     #|  check INVENTORY.json ADVISORY.json [ADVISORY.json ...]
     #|  snapshot ADVISORY.json [ADVISORY.json ...]
     #|  replay INVENTORY.json SNAPSHOT.json
+    #|  capture INVENTORY.json ADVISORY.json [ADVISORY.json ...]
+    #|  verify DELIVERY.json
     #|  help
     #|Reports and snapshots are JSON on stdout. Diagnostics are JSON on stderr.
     #|Exit: 0 not matched in supplied snapshot; 1 known version-range hit;
@@ -84,6 +86,18 @@ async fn execute(args : Array[String]) -> Int32 {
   if args.length() >= 3 && args[0] == "check" {
     let items = @audit.read_inventory(read_file(args[1]))
     let result = @audit.assess(snapshot_files(args[2:]), items)
+    println(result.to_json().stringify())
+    return result.exit_code()
+  }
+  if args.length() >= 3 && args[0] == "capture" {
+    let items = @audit.read_inventory(read_file(args[1]))
+    println(
+      @audit.capture(snapshot_files(args[2:]), items).to_json().stringify(),
+    )
+    return 0
+  }
+  if args.length() == 2 && args[0] == "verify" {
+    let result = @audit.verify_delivery(read_file(args[1])).assessment()
     println(result.to_json().stringify())
     return result.exit_code()
   }

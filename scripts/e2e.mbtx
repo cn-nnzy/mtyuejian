@@ -17,7 +17,7 @@ async fn run(target : String, args : Array[String], expected : Int) -> @shell.Ou
   if expected == 2 {
     guard @json.parse(result.stderr()) is { "code": String(_), "path": String(_), "message": String(_), .. } else { fail("unstructured diagnostic") }
     assert_eq(result.stdout(), "")
-  } else if args[0] != "snapshot" && args[0] != "help" {
+  } else if !["snapshot", "capture", "help"].contains(args[0]) {
     guard @json.parse(result.stdout()) is { "exit_code": Number(code, ..), .. } && code == expected.to_double() else { fail("exit code disagrees with report") }
   }
   result
@@ -55,5 +55,25 @@ async fn main {
   run(target, ["replay", "samples/fixed.json", path], 2) |> ignore
   @fs.write_file(path, @utf8.encode(snap.stdout()))
   run(target, ["replay", "samples/fixed.json", path], 0) |> ignore
-  println("13 end-to-end scenarios passed on \{target}; real advisory, replay, rejection and recovery verified")
+  let captured = run(target, ["capture", "samples/installed.json", advisory], 0)
+  let delivery_path = temp + "/delivery.json"
+  @fs.write_file(delivery_path, @utf8.encode(captured.stdout()))
+  defer @fs.remove(delivery_path)
+  let verified = run(target, ["verify", delivery_path], 1)
+  assert_eq(verified.stdout(), direct.stdout())
+  let corrupted = @json.parse(captured.stdout())
+  guard corrupted is Object(fields) else { fail("missing delivery envelope") }
+  fields["report"] = Json("{}")
+  @fs.write_file(delivery_path, @utf8.encode(corrupted.stringify()))
+  run(target, ["verify", delivery_path], 2) |> ignore
+  @fs.write_file(delivery_path, @utf8.encode(captured.stdout()))
+  run(target, ["verify", delivery_path], 1) |> ignore
+  let fixed = run(target, ["capture", "samples/fixed.json", advisory], 0)
+  @fs.write_file(delivery_path, @utf8.encode(fixed.stdout()))
+  run(target, ["verify", delivery_path], 0) |> ignore
+  let unknown = run(target, ["capture", "samples/unknown.json", advisory], 0)
+  @fs.write_file(delivery_path, @utf8.encode(unknown.stdout()))
+  run(target, ["verify", delivery_path], 3) |> ignore
+  run(target, ["capture", "samples/installed.json", advisory, advisory], 2) |> ignore
+  println("22 end-to-end scenarios passed on \{target}; real advisory, delivery verification, rejection and recovery verified")
 }

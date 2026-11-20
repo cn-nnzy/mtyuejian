@@ -58,10 +58,14 @@ moon -C examples/consumer run . --target wasm --deny-warn
 moon run lib/cli -- check INVENTORY.json ADVISORY.json [ADVISORY.json ...]
 moon run lib/cli -- snapshot ADVISORY.json [ADVISORY.json ...]
 moon run lib/cli -- replay INVENTORY.json SNAPSHOT.json
+moon run lib/cli -- capture INVENTORY.json ADVISORY.json [ADVISORY.json ...]
+moon run lib/cli -- verify DELIVERY.json
 moon run lib/cli -- help
 ```
 
 `snapshot` 把来源标记和原始公告作为 JSON 文本封装输出。保存该输出为文件后，即可用 `replay` 重新检查任意清单。快照保留未知字段、数字原始 token 和空白；它不提供签名或来源认证。
+
+需要交付完整评估时，用 `capture` 生成包含清单、快照、报告和 SHA-256 摘要的交付包；`verify` 无需原始路径即可重算报告并核对内容。[交付工作流](docs/delivery.md)说明了文件保存、退出码和信任边界。生成交付包成功返回 0，验证则返回报告本身的退出码。
 
 报告与快照写到 stdout，错误诊断写到 stderr。工具只读取输入文件，不修改它们。
 
