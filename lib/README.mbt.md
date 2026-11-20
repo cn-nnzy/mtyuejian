@@ -16,6 +16,9 @@ test "assess an exact installed version" {
     version="1.1.0",
   )
   let result = @mtyuejian.assess(snapshot, [installed])
+  let source = @mtyuejian.inventory_json([installed]).stringify()
+  result.to_sarif(inventory_uri="inventory.json", inventory_source=source)
+  |> ignore
   assert_eq(result.outcomes(), [@mtyuejian.Affected])
   assert_eq(result.exit_code(), 1)
   let sarif = result.to_sarif(inventory_uri="inventory.json")

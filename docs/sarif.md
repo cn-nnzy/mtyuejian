@@ -65,8 +65,9 @@ The caller supplies a relative URI using ASCII letters, digits and `-._~/`.
 Absolute paths, schemes, backslashes, percent escapes, Unicode, spaces, query or
 fragment characters and empty/dot/parent segments are rejected. The URI labels
 the caller's actual input artifact; export does not open or verify that path.
-Locations refer to the artifact without guessed source coordinates. Unscoped
-advisory entries have no fabricated inventory location. There is no automatic
+Default locations refer to the artifact without source coordinates. The optional
+[source-location workflow](source-locations.md) binds actual input and adds regions.
+Unscoped advisory entries have no fabricated inventory location. There is no automatic
 upload, line annotation or claim that every hosted code-scanning UI accepts this
 profile. Runtime applicability, severity enrichment and fix suggestions are absent.
 
@@ -82,7 +83,7 @@ The end-to-end run writes `_build/yuejian-sarif-example.json` and
 `_build/yuejian-bom-sarif-example.json`. The second script downloads the OASIS
 schema at revision `a560296ca8c921f3bdb8d4a8db57ab83dae968a7`, verifies SHA-256
 `c3b4bb2d6093897483348925aaa73af03b3e3f4bd4ca38cef26dcb4212a2682e`, then checks both
-reports with the independent validator. A deliberately invalid SARIF version must
+reports and three located variants with the independent validator. A deliberately invalid SARIF version must
 be rejected too. CI runs this check on Linux in addition to all platform tests.
 For offline use with installed dependencies, pass a matching local schema and an
 optional validator executable: `moon run scripts/sarif_schema.mbtx SCHEMA.json VALIDATOR`.

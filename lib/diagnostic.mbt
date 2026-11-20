@@ -21,5 +21,15 @@ fn reject(
 
 ///|
 fn pointer(path : String, key : String) -> String {
-  path + "/" + key.replace(old="~", new="~0").replace(old="/", new="~1")
+  let escaped = StringBuilder()
+  let mut start = 0
+  for i, unit in key.code_units() {
+    if unit == 47 || unit == 126 {
+      escaped.write_string(key[start:i].to_owned())
+      escaped.write_string(if unit == 47 { "~1" } else { "~0" })
+      start = i + 1
+    }
+  }
+  escaped.write_string(key[start:].to_owned())
+  path + "/" + escaped.to_string()
 }

@@ -38,6 +38,10 @@
   https://spdx.github.io/spdx-spec/v2.3/package-information/.
   Used for a restricted Cargo inventory consumer; no upstream schema, prose,
   implementation or test fixtures are redistributed.
+- JSON Pointer escaping follows RFC 6901 section 3:
+  https://www.rfc-editor.org/rfc/rfc6901#section-3.
+  Source-location and repeated-escape regression tests were authored locally;
+  no RFC text or implementation was copied.
 - CycloneDX 1.6 JSON reference: https://cyclonedx.org/docs/1.6/json/;
   Cargo Package URL definition:
   https://github.com/package-url/purl-spec/blob/main/docs/types/definitions/cargo-definition.md.

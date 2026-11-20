@@ -86,6 +86,7 @@ fn append_sarif_assessment(
   builder : @sarif.SarifBuilder,
   result : Assessment,
   uri : String,
+  source : SourceLocations?,
 ) -> Unit {
   for decision in result.decisions {
     let item = decision.item
@@ -119,7 +120,7 @@ fn append_sarif_assessment(
           subject + relation + decision.advisory.unwrap_or(""),
           kind=if hit { "fail" } else { "pass" },
           level=if hit { "error" } else { "none" },
-          locations=[sarif_location(uri)],
+          locations=[package_location(uri, source, item.id)],
           properties~,
           fingerprints=[sarif_identity([Json("YJ001")] + parts)],
         ),
@@ -136,7 +137,7 @@ fn append_sarif_assessment(
           "); review the attached decision",
           level="warning",
           properties~,
-          locations=[sarif_location(uri)],
+          locations=[package_location(uri, source, item.id)],
           fingerprints=[sarif_identity([Json("YJ002")] + parts)],
         ),
       )
@@ -168,6 +169,7 @@ fn finish_sarif(
   report : Json,
   snapshot : Snapshot,
   code : Int32,
+  source : SourceLocations?,
 ) -> Json raise InputError {
   let log = builder.log()
   let policy = @sarif.SarifValidationPolicy(
@@ -195,6 +197,17 @@ fn finish_sarif(
     "yuejian/report": report,
     "yuejian/snapshot": snapshot.to_json(),
   }
+  run["columnKind"] = Json("utf16CodeUnits")
+  if source is Some(source) {
+    run["newlineSequences"] = Json(["\r\n", "\n", "\r"])
+    guard run["properties"] is Object(properties) else {
+      reject(
+        "sarif-encoding", "/runs/0/properties", "Internal properties are missing",
+      )
+      return output
+    }
+    properties["yuejian/location_source"] = Json(source.raw)
+  }
   output
 }
 
@@ -202,27 +215,33 @@ fn finish_sarif(
 /// Project all decisions and incomplete evidence to SARIF 2.1.0. The caller
 /// supplies the inventory artifact's relative URI; source coordinates are not
 /// invented. Original report and advisory snapshot remain in run properties.
+/// Supply inventory_source to bind actual input and emit UTF-16 source regions.
 pub fn Assessment::to_sarif(
   self : Assessment,
   inventory_uri~ : String,
+  inventory_source? : String,
 ) -> Json raise InputError {
   let uri = sarif_uri(inventory_uri)
   let builder = sarif_builder(uri)
-  append_sarif_assessment(builder, self, uri)
-  finish_sarif(builder, self.to_json(), self.snapshot, self.exit_code())
+  let source = inventory_source.map(raw => inventory_locations(self, raw))
+  append_sarif_assessment(builder, self, uri, source)
+  finish_sarif(builder, self.to_json(), self.snapshot, self.exit_code(), source)
 }
 
 ///|
 /// Export the outer BOM gate as well as known decisions. Unresolved components
 /// become explicit warnings; original BOM text is retained in run properties.
+/// Set locate=true to index that exact retained source, including unresolved rows.
 pub fn BomAssessment::to_sarif(
   self : BomAssessment,
   bom_uri~ : String,
+  locate~ : Bool = false,
 ) -> Json raise InputError {
   let uri = sarif_uri(bom_uri)
   let builder = sarif_builder(uri)
+  let source = if locate { Some(bom_locations(self.imported)) } else { None }
   if self.result is Some(result) {
-    append_sarif_assessment(builder, result, uri)
+    append_sarif_assessment(builder, result, uri, source)
   }
   for row in self.imported.unresolved {
     let identity = match row.id {
@@ -234,7 +253,7 @@ pub fn BomAssessment::to_sarif(
         "YJ003",
         "BOM component at " + row.path + ": " + row.code,
         level="warning",
-        locations=[sarif_location(uri)],
+        locations=[indexed_location(uri, source, Some(row.path))],
         properties=[
           @sarif.SarifProperty("yuejian/component_pointer", row.path),
           @sarif.SarifProperty("yuejian/code", row.code),
@@ -244,5 +263,5 @@ pub fn BomAssessment::to_sarif(
     )
     |> ignore
   }
-  finish_sarif(builder, self.to_json(), self.snapshot, self.exit_code())
+  finish_sarif(builder, self.to_json(), self.snapshot, self.exit_code(), source)
 }

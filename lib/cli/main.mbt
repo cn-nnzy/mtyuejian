@@ -55,6 +55,8 @@ fn usage() -> String {
     #|  verify-bom BOM.delivery.json
     #|  changes-bom BEFORE.bom.delivery.json CURRENT.bom.delivery.json
     #|  sarif-bom BOM.json BOM_URI ADVISORY.json [ADVISORY.json ...]
+    #|  sarif-located DELIVERY.json INVENTORY.json INVENTORY_URI
+    #|  sarif-bom-located BOM.json BOM_URI ADVISORY.json [ADVISORY.json ...]
     #|  sarif DELIVERY.json INVENTORY_URI
     #|  sarif-cdx BOM.json BOM_URI ADVISORY.json [ADVISORY.json ...]
     #|  help
@@ -159,6 +161,21 @@ async fn execute(args : Array[String]) -> Int32 {
   if args.length() == 3 && args[0] == "sarif" {
     let result = @audit.verify_delivery(read_file(args[1])).assessment()
     println(result.to_sarif(inventory_uri=args[2]).stringify())
+    return result.exit_code()
+  }
+  if args.length() == 4 && args[0] == "sarif-located" {
+    let result = @audit.verify_delivery(read_file(args[1])).assessment()
+    println(
+      result
+      .to_sarif(inventory_uri=args[3], inventory_source=read_file(args[2]))
+      .stringify(),
+    )
+    return result.exit_code()
+  }
+  if args.length() >= 4 && args[0] == "sarif-bom-located" {
+    let imported = @audit.read_bom(read_file(args[1]), origin=args[1])
+    let result = imported.assess(snapshot_files(args[3:]))
+    println(result.to_sarif(bom_uri=args[2], locate=true).stringify())
     return result.exit_code()
   }
   if args.length() >= 4 && args[0] == "sarif-cdx" {

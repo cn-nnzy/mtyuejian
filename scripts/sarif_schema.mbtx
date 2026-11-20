@@ -13,7 +13,7 @@ async fn main {
   let args = @env.args()
   let schema = args.get(1).unwrap_or("_build/sarif-schema-2.1.0.json")
   let validator = args.get(2).unwrap_or("check-jsonschema")
-  let files = ["_build/yuejian-sarif-example.json", "_build/yuejian-bom-sarif-example.json"]
+  let files = ["_build/yuejian-sarif-example.json", "_build/yuejian-bom-sarif-example.json", "_build/yuejian-located-sarif-example.json", "_build/yuejian-spdx-sarif-example.json", "_build/yuejian-located-bom-sarif-example.json"]
   for file in files {
     if !@fs.exists(file) { fail("Run scripts/e2e.mbtx before schema validation: " + file) }
   }
@@ -34,5 +34,5 @@ async fn main {
   if @shell.Cmd(validator, ["--schemafile", schema, rejected]).output(timeout_ms=60000).exit_code() == 0 {
     fail("Independent validator accepted an invalid SARIF version")
   }
-  println("Both SARIF examples passed the pinned OASIS schema; an invalid version was rejected")
+  println("All five SARIF examples passed the pinned OASIS schema; an invalid version was rejected")
 }

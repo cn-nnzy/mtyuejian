@@ -20,6 +20,8 @@ Full BOM deliveries preserve unresolved components through archived, recomputed
 assessment handoffs, including SPDX and entirely unsupported inventories.
 BOM receipt comparison accounts for unresolved identities and removed unknown
 evidence, keeping the delta gate separate from the current absolute verdict.
+Optional SARIF source indexing binds complete inventories and locates version
+fields and unresolved BOM nodes in their actual retained JSON text.
 
 ## Possible subsequent capabilities
 

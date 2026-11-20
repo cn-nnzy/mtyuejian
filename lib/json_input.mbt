@@ -16,6 +16,8 @@ priv struct Reader {
   units : ArrayView[UInt16]
   mut pos : Int32
   mut nodes : Int32
+  spans : Map[String, (Int32, Int32)]?
+  mut span_units : Int32
 }
 
 ///|
@@ -150,11 +152,12 @@ fn Reader::value(
   path : String,
 ) -> Value raise InputError {
   self.space()
+  let start = self.pos
   self.nodes += 1
   if depth > 48 || self.nodes > 100000 {
     reject("json-limit", path, "JSON exceeds 48 levels or 100000 values")
   }
-  match self.peek() {
+  let value = match self.peek() {
     34 => Text(self.string(path))
     110 => self.literal("null", Null, path)
     116 => self.literal("true", True, path)
@@ -215,12 +218,23 @@ fn Reader::value(
       Null
     }
   }
+  if self.spans is Some(spans) {
+    self.span_units += path.length()
+    if self.span_units > 4194304 {
+      reject(
+        "source-index-limit", "", "Source index exceeds 4194304 UTF-16 units of JSON Pointer text; use artifact-only export",
+      )
+    }
+    spans[path] = (start, self.pos)
+  }
+  value
 }
 
 ///|
 fn read_value(
   text : String,
   max_units~ : Int32 = 1048576,
+  spans? : Map[String, (Int32, Int32)],
 ) -> Value raise InputError {
   if text.length() > max_units {
     reject("document-limit", "", "Document exceeds its UTF-16 code unit budget")
@@ -244,7 +258,7 @@ fn read_value(
       i += 1
     }
   }
-  let reader = Reader::{ text, units, pos: 0, nodes: 0, }
+  let reader = Reader::{ text, units, pos: 0, nodes: 0, spans, span_units: 0, }
   let value = reader.value(0, "")
   reader.space()
   if reader.pos != text.length() {

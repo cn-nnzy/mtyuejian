@@ -16,7 +16,7 @@ async fn run(target : String, args : Array[String], expected : Int) -> @shell.Ou
   if expected == 2 {
     guard @json.parse(result.stderr()) is { "code": String(_), "path": String(_), "message": String(_), .. } else { fail("unstructured diagnostic") }
     assert_eq(result.stdout(), "")
-  } else if ["sarif", "sarif-cdx", "sarif-bom"].contains(args[0]) {
+  } else if ["sarif", "sarif-cdx", "sarif-bom", "sarif-located", "sarif-bom-located"].contains(args[0]) {
     guard @json.parse(result.stdout()) is { "version": "2.1.0", "runs": Array([{ "properties": { "yuejian/exit_code": Number(code, ..), .. }, .. }]), .. } && code == expected.to_double() else { fail("SARIF gate disagrees with process exit") }
   } else if !["snapshot", "capture", "capture-bom", "help"].contains(args[0]) {
     guard @json.parse(result.stdout()) is { "exit_code": Number(code, ..), .. } && code == expected.to_double() else { fail("exit code disagrees with report") }
@@ -153,5 +153,22 @@ async fn main {
   run(target, ["changes-bom", path, prior_path], 2) |> ignore
   @fs.write_file(path, @utf8.encode(hit_receipt.stdout()))
   run(target, ["changes-bom", prior_path, path], 1) |> ignore
-  println("68 end-to-end scenarios passed on \{target}; full BOM comparison and recovery verified")
+  @fs.write_file(delivery_path, @utf8.encode(captured.stdout()))
+  let located = run(target, ["sarif-located", delivery_path, "samples/installed.json", "samples/installed.json"], 1)
+  @fs.write_file("_build/yuejian-located-sarif-example.json", @utf8.encode(located.stdout()))
+  run(target, ["sarif-located", delivery_path, "samples/fixed.json", "inventory.json"], 2) |> ignore
+  run(target, ["sarif-located", delivery_path, "samples/missing.json", "inventory.json"], 2) |> ignore
+  run(target, ["sarif-located", delivery_path, path, "inventory.json"], 2) |> ignore
+  let inventory = @fs.read_file("samples/installed.json").json()
+  guard inventory is Object(inventory_fields) && inventory_fields["packages"] is Array([a, b]) else { fail("inventory fixtures changed") }
+  inventory_fields["packages"] = Json([b, a])
+  @fs.write_file(path, inventory)
+  run(target, ["sarif-located", delivery_path, path, "inventory.json"], 1) |> ignore
+  let located_spdx = run(target, ["sarif-bom-located", "samples/cargo.spdx.json", "samples/cargo.spdx.json", advisory], 1)
+  @fs.write_file("_build/yuejian-spdx-sarif-example.json", @utf8.encode(located_spdx.stdout()))
+  let located_partial = run(target, ["sarif-bom-located", "samples/cargo-partial.cdx.json", "samples/cargo-partial.cdx.json", advisory], 3)
+  @fs.write_file("_build/yuejian-located-bom-sarif-example.json", @utf8.encode(located_partial.stdout()))
+  run(target, ["sarif-bom-located", path, "bom.json", advisory], 2) |> ignore
+  run(target, ["sarif-bom-located", "samples/cargo-fixed.cdx.json", "samples/cargo-fixed.cdx.json", advisory], 0) |> ignore
+  println("77 end-to-end scenarios passed on \{target}; source binding, precise regions, receipts and recovery verified")
 }
