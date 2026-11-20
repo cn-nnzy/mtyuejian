@@ -37,6 +37,8 @@ moon -C examples/consumer run . --target wasm --deny-warn
 
 该示例会调用公开 API、断言判定结果并打印 JSON。源码版本号不表示已完成注册表发布。需要在自己的模块中集成时，可参照其 `moon.mod`、`moon.pkg` 和 `moon.work`；可执行的 API 示例见 [lib/README.mbt.md](lib/README.mbt.md)。
 
+`moon run scripts/package_smoke.mbtx` 会生成并解压源码包，在新目录中执行严格检查、Wasm 测试、消费模块和真实数据 CLI。[源码包验收](docs/source-package.md)说明环境与验证边界。
+
 库的工作流是：
 
 1. `Package::new` 或 `read_inventory` 构造包清单。

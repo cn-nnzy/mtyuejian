@@ -1,0 +1,52 @@
+----
+import {
+  "moonbitlang/async/fs",
+  "moonbitlang/async/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+async fn command(cwd : String, program : String, args : Array[String], expected? : Int = 0) -> String {
+  let result = @shell.Cmd(program, args, cwd~).output(timeout_ms=180000)
+  guard result.exit_code() == expected else {
+    fail("Package check \{program} \{Repr(args)}: expected \{expected}, got \{result.exit_code()}: \{result.stdout()}\n\{result.stderr()}")
+  }
+  result.stdout()
+}
+
+async fn main {
+  let args = @env.args()
+  guard args.length() <= 2 else {
+    fail("Usage: moon run scripts/package_smoke.mbtx [PYTHON_EXECUTABLE]")
+  }
+  let python = args.get(1).unwrap_or("python")
+  let root = @fs.realpath(".")
+  command(root, "moon", ["package"]) |> ignore
+  let archive = @fs.realpath("_build/publish/cn-nnzy-mtyuejian-0.1.0.zip")
+  let extracted = "_build/yuejian-package-" + @env.now().to_string()
+  @fs.mkdir(extracted)
+  let cwd = @fs.realpath(extracted)
+  command(root, python, ["-m", "zipfile", "-e", archive, cwd]) |> ignore
+  // The package must work without Git metadata, a registry cache or build files.
+  for absent in [".git", ".mooncakes", "_build", "target"] {
+    assert_true(!@fs.exists(cwd + "/" + absent))
+  }
+  for required in ["LICENSE", "THIRD_PARTY.md", "README.md", "samples/SOURCES.md", "scripts/demo.mbtx", "examples/consumer/moon.work"] {
+    assert_true(@fs.exists(cwd + "/" + required))
+  }
+  let interface = @fs.read_file(cwd + "/lib/pkg.generated.mbti").text()
+  command(cwd, "moon", ["update"]) |> ignore
+  command(cwd, "moon", ["fmt", "--check"]) |> ignore
+  command(cwd, "moon", ["info", "--target", "all"]) |> ignore
+  assert_eq(@fs.read_file(cwd + "/lib/pkg.generated.mbti").text(), interface)
+  command(cwd, "moon", ["check", "--target", "all", "--deny-warn"]) |> ignore
+  command(cwd, "moon", ["test", "--target", "wasm", "--deny-warn"]) |> ignore
+  command(cwd, "moon", ["-C", "examples/consumer", "run", ".", "--target", "wasm", "--deny-warn"]) |> ignore
+  let output = command(cwd, "moon", ["run", "lib/cli", "--", "check", "samples/installed.json", "samples/RUSTSEC-2020-0071.json"], expected=1)
+  guard @json.parse(output) is {"exit_code": 1, "decisions": Array(rows), ..} && rows.length() == 2 else {
+    fail("Packaged CLI did not assess the real advisory")
+  }
+  println("Source archive passed strict checks, Wasm tests, public consumer and real-advisory CLI")
+  println("Unpacked source: " + cwd)
+}
