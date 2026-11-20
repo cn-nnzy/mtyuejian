@@ -1,0 +1,38 @@
+----
+import {
+  "moonbitlang/async/fs",
+  "moonbitlang/async/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/hex",
+  "moonbitlang/x/crypto",
+}
+----
+
+async fn main {
+  let args = @env.args()
+  let schema = args.get(1).unwrap_or("_build/sarif-schema-2.1.0.json")
+  let validator = args.get(2).unwrap_or("check-jsonschema")
+  let files = ["_build/yuejian-sarif-example.json", "_build/yuejian-bom-sarif-example.json"]
+  for file in files {
+    if !@fs.exists(file) { fail("Run scripts/e2e.mbtx before schema validation: " + file) }
+  }
+  if args.length() < 2 {
+    let url = "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/a560296ca8c921f3bdb8d4a8db57ab83dae968a7/sarif-2.1/schema/sarif-schema-2.1.0.json"
+    @shell.Cmd("curl", ["--fail", "--location", "--silent", "--show-error", "--max-time", "40", "--output", schema, url]).output(timeout_ms=45000).check()
+  }
+  let bytes = @fs.read_file(schema).binary()
+  let digest = @hex.encode(Bytes::from_array(@crypto.sha256(bytes)[:])[:])
+  assert_eq(digest, "c3b4bb2d6093897483348925aaa73af03b3e3f4bd4ca38cef26dcb4212a2682e")
+  @shell.Cmd(validator, ["--schemafile", schema] + files).output(timeout_ms=60000).check()
+  let invalid = @fs.read_file(files[0]).json()
+  guard invalid is Object(fields) else { fail("SARIF must be an object") }
+  fields["version"] = Json("invalid")
+  let rejected = "_build/yuejian-invalid-sarif.json"
+  @fs.write_file(rejected, invalid)
+  defer @fs.remove(rejected)
+  if @shell.Cmd(validator, ["--schemafile", schema, rejected]).output(timeout_ms=60000).exit_code() == 0 {
+    fail("Independent validator accepted an invalid SARIF version")
+  }
+  println("Both SARIF examples passed the pinned OASIS schema; an invalid version was rejected")
+}

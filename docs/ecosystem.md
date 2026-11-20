@@ -9,6 +9,7 @@ algorithms. This is a bounded review of public projects and known local work.
 | [cogna-dev/sbom](https://mooncakes.io/docs/cogna-dev/sbom) | scan_cargo, export_spdx, export_cyclonedx; ordinary version constraints | Supplies dependency inventory; Yuejian does not generate SBOMs or parse lockfiles |
 | [VexAudit](https://github.com/q0w1ertyuiop/VexAudit) | read_openvex, read_trivy_json, reconcile | Reviews findings and VEX claim coverage; Yuejian evaluates version evidence before that workflow |
 | [moonbit-license-audit](https://mooncakes.io/docs/clbbbb/moonbit-license-audit) | SPDX expression and project license metadata review | Different evidence and policy; no license audit in Yuejian |
+| [Derk2006/sarifkit](https://mooncakes.io/docs/Derk2006/sarifkit@0.1.3) | SarifBuilder, SarifResult, SarifLog; SARIF construction, validation and report operations | Reused as a dependency; Yuejian adds domain decisions and evidence mapping, not a generic SARIF toolkit |
 | [OSV-Scanner](https://github.com/google/osv-scanner) | Mature Go scanner using OSV data | Demand/reference workflow; Yuejian is an embeddable MoonBit core, not a feature-equivalent replacement |
 
 Search terms included MoonBit/Mooncakes with OSV, vulnerability, advisory,

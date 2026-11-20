@@ -18,6 +18,15 @@ test "assess an exact installed version" {
   let result = @mtyuejian.assess(snapshot, [installed])
   assert_eq(result.outcomes(), [@mtyuejian.Affected])
   assert_eq(result.exit_code(), 1)
+  let sarif = result.to_sarif(inventory_uri="inventory.json")
+  guard sarif
+    is {
+      "version": "2.1.0",
+      "runs": Array([{ "properties": { "yuejian/exit_code": 1, .. }, .. }]),
+      ..
+    } else {
+    fail("SARIF must retain the assessment gate")
+  }
 }
 ```
 

@@ -44,12 +44,14 @@ pub struct Assessment {
 pub fn Assessment::exit_code(Self) -> Int32
 pub fn Assessment::outcomes(Self) -> Array[Outcome]
 pub fn Assessment::to_json(Self) -> @json.Json
+pub fn Assessment::to_sarif(Self, inventory_uri~ : String) -> @json.Json raise InputError
 
 pub struct BomAssessment {
   // private fields
 }
 pub fn BomAssessment::exit_code(Self) -> Int32
 pub fn BomAssessment::to_json(Self) -> @json.Json
+pub fn BomAssessment::to_sarif(Self, bom_uri~ : String) -> @json.Json raise InputError
 
 pub struct BomImport {
   // private fields

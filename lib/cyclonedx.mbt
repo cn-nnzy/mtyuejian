@@ -19,6 +19,7 @@ pub struct BomImport {
 pub struct BomAssessment {
   priv imported : BomImport
   priv result : Assessment?
+  priv snapshot : Snapshot
 }
 
 ///|
@@ -245,7 +246,7 @@ pub fn BomImport::assess(
   } else {
     Some(assess(snapshot, self.packages))
   }
-  { imported: self, result, }
+  { imported: self, result, snapshot, }
 }
 
 ///|

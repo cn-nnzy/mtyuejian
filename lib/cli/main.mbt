@@ -50,6 +50,8 @@ fn usage() -> String {
     #|  verify DELIVERY.json
     #|  changes BEFORE.delivery.json CURRENT.delivery.json
     #|  check-cdx BOM.json ADVISORY.json [ADVISORY.json ...]
+    #|  sarif DELIVERY.json INVENTORY_URI
+    #|  sarif-cdx BOM.json BOM_URI ADVISORY.json [ADVISORY.json ...]
     #|  help
     #|Reports and snapshots are JSON on stdout. Diagnostics are JSON on stderr.
     #|Exit: 0 not matched in supplied snapshot; 1 known version-range hit;
@@ -116,6 +118,17 @@ async fn execute(args : Array[String]) -> Int32 {
     println(result.to_json().stringify())
     return result.exit_code()
   }
+  if args.length() == 3 && args[0] == "sarif" {
+    let result = @audit.verify_delivery(read_file(args[1])).assessment()
+    println(result.to_sarif(inventory_uri=args[2]).stringify())
+    return result.exit_code()
+  }
+  if args.length() >= 4 && args[0] == "sarif-cdx" {
+    let imported = @audit.read_cyclonedx(read_file(args[1]), origin=args[1])
+    let result = imported.assess(snapshot_files(args[3:]))
+    println(result.to_sarif(bom_uri=args[2]).stringify())
+    return result.exit_code()
+  }
   if args.length() == 3 && args[0] == "replay" {
     let items = @audit.read_inventory(read_file(args[1]))
     let snapshot = @audit.read_snapshot(read_file(args[2]))
@@ -126,7 +139,7 @@ async fn execute(args : Array[String]) -> Int32 {
   raise @audit.Invalid(
     code="usage",
     path="",
-    message="Use help for check, snapshot and replay syntax",
+    message="Use help for available commands and syntax",
   )
 }
 

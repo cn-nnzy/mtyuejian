@@ -21,8 +21,18 @@
   https://github.com/moonbitlang/core. JSON string decoding/encoding, collections
   and test facilities are reused through imports, not vendored source.
 - `moonbitlang/x@0.5.7`: Apache-2.0, https://github.com/moonbitlang/x.
-  Its crypto package computes SHA-256 for assessment deliveries. The digest is
+  Its crypto package computes SHA-256 for assessment deliveries and SARIF identities. The digest is
   framing/integrity evidence, not a signature or publisher-authentication claim.
+- `Derk2006/sarifkit@0.1.3`: MIT, https://github.com/Derk2006/sarifkit.
+  Imported for SARIF builders, typed results, locations, serialization and checks.
+  Yuejian adds domain mappings and retained evidence through SARIF properties.
+- OASIS SARIF 2.1.0 plus Errata 01:
+  https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html.
+  The independent validation script downloads the official repository schema from
+  https://github.com/oasis-tcs/sarif-spec/blob/a560296ca8c921f3bdb8d4a8db57ab83dae968a7/sarif-2.1/schema/sarif-schema-2.1.0.json.
+  No schema or specification text is redistributed. `check-jsonschema@0.39.0`
+  (Apache-2.0, https://github.com/python-jsonschema/check-jsonschema) is an optional
+  independent validation tool used by the Linux CI job.
 - Apache-2.0 license text: https://www.apache.org/licenses/LICENSE-2.0.txt.
 - CycloneDX 1.6 JSON reference: https://cyclonedx.org/docs/1.6/json/;
   Cargo Package URL definition:
@@ -30,5 +40,5 @@
   Used as behavioral references for a restricted inventory projection. No schema,
   specification text or upstream implementation is redistributed.
 
-GitHub Actions uses actions/checkout (MIT) and ilammy/msvc-dev-cmd (MIT) by
+GitHub Actions uses actions/checkout, actions/setup-python and ilammy/msvc-dev-cmd (MIT) by
 reference. Their source is not redistributed in this repository.

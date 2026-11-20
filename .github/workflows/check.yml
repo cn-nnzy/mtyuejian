@@ -54,5 +54,15 @@ jobs:
         run: moon run scripts/e2e.mbtx wasm
       - name: End-to-end native
         run: moon run scripts/e2e.mbtx native
+      - uses: actions/setup-python@v5
+        if: runner.os == 'Linux'
+        with:
+          python-version: '3.12'
+      - name: Independent SARIF validator
+        if: runner.os == 'Linux'
+        run: python -m pip install --disable-pip-version-check check-jsonschema==0.39.0
+      - name: Official SARIF schema
+        if: runner.os == 'Linux'
+        run: moon run scripts/sarif_schema.mbtx
       - name: Downstream consumer
         run: moon -C examples/consumer run . --target wasm --deny-warn

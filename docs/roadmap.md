@@ -12,11 +12,13 @@ Verified-delivery comparison now reports version/source changes, retained hits,
 new findings, lost evidence and installation-identity substitutions.
 CycloneDX 1.5/1.6 inventory import resolves a documented Cargo-PURL subset,
 preserves original BOM text and keeps unsupported components in the outer gate.
+SARIF export reuses sarifkit to expose version findings, explicit completeness
+warnings and stable identities while retaining the full report and snapshot.
 
 ## Possible subsequent capabilities
 
-1. Integrate assessments into standard CI report formats without replacing
-   existing report builders or losing incomplete evidence.
+1. Validate adoption with real downstream BOM producers and report consumers
+   before broadening input profiles or claiming hosted UI compatibility.
 2. Add individual ecosystem version-ordering profiles only with reference data,
    a documented identity convention and meaningful differential tests.
 

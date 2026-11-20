@@ -62,6 +62,8 @@ moon run lib/cli -- capture INVENTORY.json ADVISORY.json [ADVISORY.json ...]
 moon run lib/cli -- verify DELIVERY.json
 moon run lib/cli -- changes BEFORE.delivery.json CURRENT.delivery.json
 moon run lib/cli -- check-cdx BOM.json ADVISORY.json [ADVISORY.json ...]
+moon run lib/cli -- sarif DELIVERY.json INVENTORY_URI
+moon run lib/cli -- sarif-cdx BOM.json BOM_URI ADVISORY.json [ADVISORY.json ...]
 moon run lib/cli -- help
 ```
 
@@ -72,6 +74,8 @@ moon run lib/cli -- help
 `changes` 验证两份交付包后，列出新增命中、版本或公告变化、证据消失和不确定项。变化门禁与当前评估门禁分别保留，已有漏洞不会因为变化门禁通过而消失，详见[评估变化](docs/changes.md)。
 
 `check-cdx` 接入现有 CycloneDX 1.5/1.6 清单，当前仅精确解析默认 crates.io 的 Cargo PURL。其他组件、缺失身份和冲突字段均保留为未解析项，阻止不完整清单通过。可直接运行[三组 BOM 示例](docs/cyclonedx.md)，无需先手写本项目的清单格式。
+
+`sarif` 与 `sarif-cdx` 输出 SARIF 2.1.0，分别读取已核验交付包和 BOM。报告区分版本命中、未命中与证据缺失，保留完整报告和原始公告快照；退出码仍沿用评估门禁。运行方式、稳定标识及格式校验见 [SARIF 工作流](docs/sarif.md)。
 
 报告与快照写到 stdout，错误诊断写到 stderr。工具只读取输入文件，不修改它们。
 
