@@ -18,6 +18,7 @@ priv struct Reader {
   mut nodes : Int32
   spans : Map[String, (Int32, Int32)]?
   mut span_units : Int32
+  mut path_units : Int32
 }
 
 ///|
@@ -55,6 +56,27 @@ fn Reader::expect(
 ///|
 fn digit(unit : Int32) -> Bool {
   unit >= 48 && unit <= 57
+}
+
+///|
+fn Reader::child_path(
+  self : Reader,
+  parent : String,
+  key : String,
+) -> String raise InputError {
+  let mut size = parent.length() + 1 + key.length()
+  for unit in key.code_units() {
+    if unit == 47 || unit == 126 {
+      size += 1
+    }
+  }
+  if size > 16777216 - self.path_units {
+    reject(
+      "json-work-limit", "", "JSON path construction exceeds 16777216 UTF-16 units; reduce deeply repeated metadata",
+    )
+  }
+  self.path_units += size
+  pointer(parent, key)
 }
 
 ///|
@@ -170,7 +192,7 @@ fn Reader::value(
         while true {
           self.space()
           let key = self.string(path)
-          let child = pointer(path, key)
+          let child = self.child_path(path, key)
           if fields.contains(key) {
             reject(
               "duplicate-key", child, "Object keys must be unique after escape decoding",
@@ -196,7 +218,10 @@ fn Reader::value(
       if self.peek() != 93 {
         while true {
           values.push(
-            self.value(depth + 1, pointer(path, values.length().to_string())),
+            self.value(
+              depth + 1,
+              self.child_path(path, values.length().to_string()),
+            ),
           )
           self.space()
           if self.peek() != 44 {
@@ -258,7 +283,15 @@ fn read_value(
       i += 1
     }
   }
-  let reader = Reader::{ text, units, pos: 0, nodes: 0, spans, span_units: 0, }
+  let reader = Reader::{
+    text,
+    units,
+    pos: 0,
+    nodes: 0,
+    spans,
+    span_units: 0,
+    path_units: 0,
+  }
   let value = reader.value(0, "")
   reader.space()
   if reader.pos != text.length() {

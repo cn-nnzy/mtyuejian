@@ -100,6 +100,7 @@ not verified provenance. There is no signature or tamper-detection claim.
 | OSV/inventory input | 1,048,576 UTF-16 code units |
 | Snapshot envelope | 2,097,152 UTF-16 code units |
 | JSON nesting / values | 48 / 100,000 |
+| Cumulative constructed JSON Pointer text | 16,777,216 UTF-16 units |
 | Nonblank identity/source strings | 4,096 code units |
 | SemVer string | 256 code units |
 | Inventory packages | 1–1,024 |
@@ -111,6 +112,12 @@ not verified provenance. There is no signature or tamper-detection claim.
 | Enumerated versions per affected entry | 8,192 |
 | Aliases per document | 128 |
 | CLI file byte size | 8 MiB |
+
+All JSON readers enforce the cumulative pointer-work budget, even without source
+indexing. This stops small documents with long ancestor keys and repeated child
+values from repeatedly constructing very large paths. The check runs before
+allocating each child pointer and raises `json-work-limit`; it does not truncate
+metadata. Reads within the budget preserve the same values and source text.
 
 The CLI requires strict UTF-8 JSON without a BOM and reads bounded chunks. No
 input file is rewritten. All input failures return structured diagnostics and

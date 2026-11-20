@@ -22,6 +22,8 @@ BOM receipt comparison accounts for unresolved identities and removed unknown
 evidence, keeping the delta gate separate from the current absolute verdict.
 Optional SARIF source indexing binds complete inventories and locates version
 fields and unresolved BOM nodes in their actual retained JSON text.
+Ordinary parsing also bounds cumulative pointer construction before allocation,
+limiting repeated metadata path amplification without dropping fields.
 
 ## Possible subsequent capabilities
 
