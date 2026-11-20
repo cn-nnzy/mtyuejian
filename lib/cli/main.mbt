@@ -50,6 +50,10 @@ fn usage() -> String {
     #|  verify DELIVERY.json
     #|  aliases DELIVERY.json
     #|  aliases-bom BOM.delivery.json
+    #|  review DELIVERY.json
+    #|  review-bom BOM.delivery.json
+    #|  review --expected-sha256 SHA256 DELIVERY.json
+    #|  review-bom --expected-sha256 SHA256 BOM.delivery.json
     #|  verify --expected-sha256 SHA256 DELIVERY.json
     #|  verify-bom --expected-sha256 SHA256 BOM.delivery.json
     #|  changes --baseline-sha256 SHA256 BEFORE.delivery.json CURRENT.delivery.json
@@ -93,6 +97,18 @@ async fn snapshot_files(paths : ArrayView[String]) -> @audit.Snapshot {
 ///|
 async fn execute(args : Array[String]) -> Int32 {
   if args.length() == 4 && args[1] == "--expected-sha256" {
+    if args[0] == "review" {
+      println(
+        @audit.verify_delivery(read_file(args[3]), expected_sha256=args[2]).to_markdown(),
+      )
+      return 0
+    }
+    if args[0] == "review-bom" {
+      println(
+        @audit.verify_bom_delivery(read_file(args[3]), expected_sha256=args[2]).to_markdown(),
+      )
+      return 0
+    }
     if args[0] == "verify" {
       let result = @audit.verify_delivery(
         read_file(args[3]),
@@ -162,6 +178,14 @@ async fn execute(args : Array[String]) -> Int32 {
     let delivery = @audit.verify_delivery(read_file(args[1]))
     println(delivery.alias_review().stringify())
     return delivery.assessment().exit_code()
+  }
+  if args.length() == 2 && args[0] == "review" {
+    println(@audit.verify_delivery(read_file(args[1])).to_markdown())
+    return 0
+  }
+  if args.length() == 2 && args[0] == "review-bom" {
+    println(@audit.verify_bom_delivery(read_file(args[1])).to_markdown())
+    return 0
   }
   if args.length() == 2 && args[0] == "aliases-bom" {
     let delivery = @audit.verify_bom_delivery(read_file(args[1]))

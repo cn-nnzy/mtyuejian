@@ -20,5 +20,6 @@ fn main raise {
     expected_sha256=receipt.digest(),
   )
   assert_eq(verified.assessment().exit_code(), 1)
+  assert_true(verified.to_markdown().contains("Assessment exit code: 1"))
   println(report.to_json().stringify())
 }

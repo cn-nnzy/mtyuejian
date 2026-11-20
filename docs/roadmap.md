@@ -28,6 +28,9 @@ Optional independent receipt pins bind verification and delta baselines to an
 approved digest while preserving the original wire formats and verdicts.
 Alias review correlates declared identifiers without merging decisions or
 changing gates, using index links and a real RustSec/GitHub dual-source example.
+Markdown review includes readable decisions, unresolved evidence, alias groups
+and a complete replayable receipt; adaptive literal delimiters are tested with
+an independent renderer and untrusted source formatting.
 
 ## Possible subsequent capabilities
 

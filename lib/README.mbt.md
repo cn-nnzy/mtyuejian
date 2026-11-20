@@ -56,6 +56,7 @@ test "import a Cargo BOM without losing its source" {
   )
   let restored = @mtyuejian.verify_bom_delivery(receipt.to_json().stringify())
   assert_eq(restored.digest(), receipt.digest())
+  assert_true(restored.to_markdown().contains("Assessment exit code: 3"))
   guard restored.alias_review()
     is { "profile": "alias-review-v1", "exit_code": 3, .. } else {
     fail("alias review must retain the outer gate")

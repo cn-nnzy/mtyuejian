@@ -18,7 +18,7 @@ async fn run(target : String, args : Array[String], expected : Int) -> @shell.Ou
     assert_eq(result.stdout(), "")
   } else if ["sarif", "sarif-cdx", "sarif-bom", "sarif-located", "sarif-bom-located"].contains(args[0]) {
     guard @json.parse(result.stdout()) is { "version": "2.1.0", "runs": Array([{ "properties": { "yuejian/exit_code": Number(code, ..), .. }, .. }]), .. } && code == expected.to_double() else { fail("SARIF gate disagrees with process exit") }
-  } else if !["snapshot", "capture", "capture-bom", "help"].contains(args[0]) {
+  } else if !["snapshot", "capture", "capture-bom", "review", "review-bom", "help"].contains(args[0]) {
     guard @json.parse(result.stdout()) is { "exit_code": Number(code, ..), .. } && code == expected.to_double() else { fail("exit code disagrees with report") }
   }
   result
@@ -206,5 +206,33 @@ async fn main {
   run(target, ["aliases", delivery_path], 1) |> ignore
   @fs.write_file(path, @utf8.encode(linked_bom.stdout()))
   run(target, ["aliases-bom", path], 3) |> ignore
-  println("99 end-to-end scenarios passed on \{target}; real dual-source alias review and recovery verified")
+  let markdown = run(target, ["review", delivery_path], 0)
+  assert_true(markdown.stdout().contains("Assessment exit code: 1"))
+  assert_true(markdown.stdout().contains("undetermined: 2"))
+  @fs.write_file("_build/yuejian-review.md", markdown.stdout())
+  let bom_markdown = run(target, ["review-bom", path], 0)
+  assert_true(bom_markdown.stdout().contains("Assessment exit code: 3"))
+  assert_true(bom_markdown.stdout().contains("Unresolved entries: 1"))
+  @fs.write_file("_build/yuejian-bom-review.md", bom_markdown.stdout())
+  guard @json.parse(linked.stdout()) is { "sha256": String(linked_pin), .. } && @json.parse(linked_bom.stdout()) is { "sha256": String(linked_bom_pin), .. } else { fail("linked receipt digests missing") }
+  run(target, ["review", "--expected-sha256", linked_pin, delivery_path], 0) |> ignore
+  run(target, ["review", "--expected-sha256", fixed_pin, delivery_path], 2) |> ignore
+  run(target, ["review-bom", "--expected-sha256", linked_bom_pin, path], 0) |> ignore
+  run(target, ["review-bom", "--expected-sha256", bom_pin, path], 2) |> ignore
+  run(target, ["review-bom", delivery_path], 2) |> ignore
+  @fs.write_file(path, b"{}")
+  run(target, ["review-bom", path], 2) |> ignore
+  @fs.write_file(path, @utf8.encode(linked_bom.stdout()))
+  run(target, ["review-bom", path], 0) |> ignore
+  let untrusted = @fs.read_file("samples/fixed.json").json()
+  guard untrusted is { "packages": Array([Object(untrusted_item)]), .. } else { fail("single package fixture changed") }
+  untrusted_item["id"] = Json("id```<script>test</script>\n# heading\n[link](https://example.invalid/) | 😀")
+  @fs.write_file(path, untrusted)
+  let untrusted_receipt = run(target, ["capture", path, advisory], 0)
+  @fs.write_file(path, @utf8.encode(untrusted_receipt.stdout()))
+  let untrusted_markdown = run(target, ["review", path], 0)
+  @fs.write_file("_build/yuejian-untrusted-review.md", untrusted_markdown.stdout())
+  run(target, ["review", "--expected-sha256", "invalid", path], 2) |> ignore
+  run(target, ["review", path], 0) |> ignore
+  println("112 end-to-end scenarios passed on \{target}; lossless Markdown reviews, pins and recovery verified")
 }

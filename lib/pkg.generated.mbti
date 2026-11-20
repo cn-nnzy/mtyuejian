@@ -76,6 +76,7 @@ pub fn BomDelivery::alias_review(Self) -> @json.Json
 pub fn BomDelivery::assessment(Self) -> BomAssessment
 pub fn BomDelivery::digest(Self) -> String
 pub fn BomDelivery::to_json(Self) -> @json.Json
+pub fn BomDelivery::to_markdown(Self) -> String raise InputError
 
 pub struct BomImport {
   // private fields
@@ -98,6 +99,7 @@ pub fn Delivery::alias_review(Self) -> @json.Json
 pub fn Delivery::assessment(Self) -> Assessment
 pub fn Delivery::digest(Self) -> String
 pub fn Delivery::to_json(Self) -> @json.Json
+pub fn Delivery::to_markdown(Self) -> String raise InputError
 
 #derive(Eq, @debug.Debug)
 pub(all) enum Outcome {

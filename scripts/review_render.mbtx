@@ -1,0 +1,25 @@
+----
+import {
+  "moonbitlang/async/fs",
+  "moonbitlang/async/shell",
+  "moonbitlang/core/env",
+}
+----
+async fn main {
+  let renderer = @env.args().get(1).unwrap_or("cmark")
+  let files = ["_build/yuejian-review.md", "_build/yuejian-bom-review.md", "_build/yuejian-untrusted-review.md"]
+  for i, file in files {
+    if !@fs.exists(file) { fail("Run scripts/e2e.mbtx before rendering: " + file) }
+    let result = @shell.Cmd(renderer, [file]).output(timeout_ms=60000)
+    result.check()
+    let html = result.stdout()
+    assert_eq(html.split("<pre><code class=\"language-json\">").collect().length(), 2)
+    assert_true(html.contains("Complete receipt"))
+    assert_true(!html.contains("<script>"))
+    assert_true(!html.contains("<img "))
+    assert_true(!html.contains("<a href="))
+    if i == 2 { assert_true(html.contains("&lt;script&gt;")) }
+    @fs.write_file(file + ".html", html)
+  }
+  println("Three reviews rendered with one complete receipt block each; untrusted markup stayed literal")
+}

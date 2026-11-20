@@ -53,3 +53,10 @@
 
 GitHub Actions uses actions/checkout, actions/setup-python and ilammy/msvc-dev-cmd (MIT) by
 reference. Their source is not redistributed in this repository.
+
+Markdown behavioral references are the CommonMark 0.31.2 code-span and fenced-block
+rules, https://spec.commonmark.org/0.31.2/ (specification by John MacFarlane,
+CC BY-SA 4.0). No prose or test fixtures were copied. The independent rendering
+check imports no renderer code: it invokes `commonmark@0.9.1`'s `cmark` CLI
+(BSD-3-Clause, https://github.com/readthedocs/commonmark.py). This optional Linux
+CI dependency is pinned as a regression oracle; generated reviews do not require it.
