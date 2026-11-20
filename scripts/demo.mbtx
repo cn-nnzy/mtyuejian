@@ -1,0 +1,78 @@
+----
+import {
+  "moonbitlang/async/fs",
+  "moonbitlang/async/shell",
+  "moonbitlang/core/encoding/hex",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x/crypto",
+}
+----
+
+async fn cli(target : String, args : Array[String], expected : Int) -> String {
+  let result = @shell.Cmd("moon", ["run", "--target", target, "--deny-warn", "lib/cli", "--"] + args).output(timeout_ms=120000)
+  guard result.exit_code() == expected else {
+    fail("Demo step \{Repr(args)}: expected exit \{expected}, got \{result.exit_code()}: \{result.stderr()}")
+  }
+  result.stdout()
+}
+
+async fn save(dir : String, name : String, content : String, artifacts : Array[Json]) -> Unit {
+  let bytes = @utf8.encode(content)
+  @fs.write_file(dir + "/" + name, bytes)
+  let digest = @hex.encode(Bytes::from_array(@crypto.sha256(bytes)[:])[:])
+  artifacts.push({"path": Json(name), "sha256": Json(digest)})
+}
+
+fn pin(receipt : String) -> String raise {
+  guard @json.parse(receipt) is {"sha256": String(digest), ..} else { fail("Receipt has no digest") }
+  digest
+}
+
+async fn main {
+  let args = @env.args()
+  let target = args.get(1).unwrap_or("wasm")
+  guard args.length() <= 2 && ["wasm", "native"].contains(target) else {
+    fail("Usage: moon run scripts/demo.mbtx [wasm|native]")
+  }
+  let dir = "_build/yuejian-demo-" + @env.now().to_string()
+  @fs.mkdir(dir)
+  @fs.mkdir(dir + "/samples")
+  let artifacts : Array[Json] = []
+  let advisory = "samples/RUSTSEC-2020-0071.json"
+  // Capture commands return 0 for artifact creation, regardless of the verdict.
+  let before = cli(target, ["capture", "samples/before-fix.json", advisory], 0)
+  let fixed = cli(target, ["capture", "samples/fixed.json", advisory], 0)
+  let unknown = cli(target, ["capture", "samples/unknown.json", advisory], 0)
+  save(dir, "before.delivery.json", before, artifacts)
+  save(dir, "fixed.delivery.json", fixed, artifacts)
+  save(dir, "unknown.delivery.json", unknown, artifacts)
+  let baseline = pin(before)
+  save(dir, "before.report.json", cli(target, ["verify", "--expected-sha256", baseline, dir + "/before.delivery.json"], 1), artifacts)
+  save(dir, "fixed.report.json", cli(target, ["verify", dir + "/fixed.delivery.json"], 0), artifacts)
+  save(dir, "unknown.report.json", cli(target, ["verify", dir + "/unknown.delivery.json"], 3), artifacts)
+  save(dir, "changes.json", cli(target, ["changes", "--baseline-sha256", baseline, dir + "/before.delivery.json", dir + "/fixed.delivery.json"], 0), artifacts)
+  save(dir, "before.sarif.json", cli(target, ["sarif-located", dir + "/before.delivery.json", "samples/before-fix.json", "samples/before-fix.json"], 1), artifacts)
+  save(dir, "review.md", cli(target, ["review", "--expected-sha256", baseline, dir + "/before.delivery.json"], 0), artifacts)
+  let bom = cli(target, ["capture-bom", "samples/cargo-partial.cdx.json", advisory], 0)
+  save(dir, "partial.bom.delivery.json", bom, artifacts)
+  save(dir, "partial.bom.report.json", cli(target, ["verify-bom", dir + "/partial.bom.delivery.json"], 3), artifacts)
+  save(dir, "partial.review.md", cli(target, ["review-bom", dir + "/partial.bom.delivery.json"], 0), artifacts)
+  for name in ["before-fix.json", "fixed.json", "unknown.json", "cargo-partial.cdx.json", "RUSTSEC-2020-0071.json", "SOURCES.md"] {
+    save(dir, "samples/" + name, @fs.read_file("samples/" + name).text(), artifacts)
+  }
+  for name in ["LICENSE", "THIRD_PARTY.md"] {
+    save(dir, name, @fs.read_file(name).text(), artifacts)
+  }
+  // This marker is written last; an interrupted directory has no success marker.
+  @fs.write_file(dir + "/manifest.json", Json::object({
+    "schema_version": Json(1),
+    "target": Json(target),
+    "gates": {"before": 1, "fixed": 0, "unknown": 3, "changes": 0, "partial_bom": 3},
+    "baseline_receipt_sha256": Json(baseline),
+    "artifacts": Json(artifacts),
+  }))
+  println("Demo verified: affected=1, fixed=0, unknown=3, fix delta=0, partial BOM=3")
+  println("Artifacts and SHA-256 manifest: " + dir)
+}

@@ -25,6 +25,8 @@ moon run lib/cli -- check samples/fixed.json samples/RUSTSEC-2020-0071.json
 
 输入文件均可替换为自己的数据，不需要账户、API 密钥、数据库或在线漏洞服务。依赖安装完成后，检查和重放均可断网运行。
 
+完整演示可执行 `moon run scripts/demo.mbtx`：自动验证命中、修复、证据不足和部分 SBOM 的退出码，生成收据、修复对比、SARIF、Markdown 和校验清单。输出位置及复验方法见[一键演示](docs/demo.md)。
+
 ## 作为库采用
 
 公开包为 `cn-nnzy/mtyuejian`。本仓库提供[独立消费模块](examples/consumer)，通过 `moon.work` 解析本地源码依赖：
