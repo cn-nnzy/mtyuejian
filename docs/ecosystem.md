@@ -20,3 +20,8 @@ this boundary before adding lockfile scanning, online feeds or VEX policy.
 The project follows the documented OSV format and SemVer precedence. The public
 API centers on advisory snapshots, installed packages, assessments and evidence;
 the private JSON reader and version comparator are implementation details.
+
+The CycloneDX adapter accepts a restricted Cargo-PURL projection of existing
+BOMs, including the format exported by cogna-dev/sbom. It adds OSV evidence
+assessment and explicit unresolved-component gating; no lockfile scanner,
+SBOM generator or general-purpose PURL library is added.

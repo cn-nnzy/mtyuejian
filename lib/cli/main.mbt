@@ -49,6 +49,7 @@ fn usage() -> String {
     #|  capture INVENTORY.json ADVISORY.json [ADVISORY.json ...]
     #|  verify DELIVERY.json
     #|  changes BEFORE.delivery.json CURRENT.delivery.json
+    #|  check-cdx BOM.json ADVISORY.json [ADVISORY.json ...]
     #|  help
     #|Reports and snapshots are JSON on stdout. Diagnostics are JSON on stderr.
     #|Exit: 0 not matched in supplied snapshot; 1 known version-range hit;
@@ -108,6 +109,12 @@ async fn execute(args : Array[String]) -> Int32 {
     let changes = @audit.compare_deliveries(before, current)
     println(changes.to_json().stringify())
     return changes.exit_code()
+  }
+  if args.length() >= 3 && args[0] == "check-cdx" {
+    let imported = @audit.read_cyclonedx(read_file(args[1]), origin=args[1])
+    let result = imported.assess(snapshot_files(args[2:]))
+    println(result.to_json().stringify())
+    return result.exit_code()
   }
   if args.length() == 3 && args[0] == "replay" {
     let items = @audit.read_inventory(read_file(args[1]))

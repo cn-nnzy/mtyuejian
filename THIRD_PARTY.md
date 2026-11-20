@@ -24,6 +24,11 @@
   Its crypto package computes SHA-256 for assessment deliveries. The digest is
   framing/integrity evidence, not a signature or publisher-authentication claim.
 - Apache-2.0 license text: https://www.apache.org/licenses/LICENSE-2.0.txt.
+- CycloneDX 1.6 JSON reference: https://cyclonedx.org/docs/1.6/json/;
+  Cargo Package URL definition:
+  https://github.com/package-url/purl-spec/blob/main/docs/types/definitions/cargo-definition.md.
+  Used as behavioral references for a restricted inventory projection. No schema,
+  specification text or upstream implementation is redistributed.
 
 GitHub Actions uses actions/checkout (MIT) and ilammy/msvc-dev-cmd (MIT) by
 reference. Their source is not redistributed in this repository.

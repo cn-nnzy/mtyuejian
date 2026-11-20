@@ -1,0 +1,8 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "components": [
+    {"type":"library","bom-ref":"time","name":"time","version":"0.2.23","purl":"pkg:cargo/time@0.2.23"}
+  ]
+}

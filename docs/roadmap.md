@@ -10,11 +10,13 @@ deliveries now bind the complete inputs and report with SHA-256 and verify the
 saved result by recomputation.
 Verified-delivery comparison now reports version/source changes, retained hits,
 new findings, lost evidence and installation-identity substitutions.
+CycloneDX 1.5/1.6 inventory import resolves a documented Cargo-PURL subset,
+preserves original BOM text and keeps unsupported components in the outer gate.
 
 ## Possible subsequent capabilities
 
-1. Add an inventory adapter for an existing SBOM producer, retaining unresolved
-   identities and unsupported component metadata. Keep the evaluator independent.
+1. Integrate assessments into standard CI report formats without replacing
+   existing report builders or losing incomplete evidence.
 2. Add individual ecosystem version-ordering profiles only with reference data,
    a documented identity convention and meaningful differential tests.
 

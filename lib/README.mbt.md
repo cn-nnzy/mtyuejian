@@ -20,3 +20,20 @@ test "assess an exact installed version" {
   assert_eq(result.exit_code(), 1)
 }
 ```
+
+Resolve an existing BOM only when every component has a supported identity.
+The exact input remains available for later inspection.
+
+```mbt check
+///|
+test "import a Cargo BOM without losing its source" {
+  let raw =
+    #|{"bomFormat":"CycloneDX","specVersion":"1.6","components":[{"type":"library","bom-ref":"app/time","name":"time","version":"0.2.23","purl":"pkg:cargo/time@0.2.23"}]}
+  let imported = @mtyuejian.read_cyclonedx(raw)
+  let installed = @mtyuejian.read_inventory(
+    imported.inventory_json().stringify(),
+  )
+  assert_eq(installed.length(), 1)
+  assert_eq(imported.source(), raw)
+}
+```

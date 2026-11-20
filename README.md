@@ -61,6 +61,7 @@ moon run lib/cli -- replay INVENTORY.json SNAPSHOT.json
 moon run lib/cli -- capture INVENTORY.json ADVISORY.json [ADVISORY.json ...]
 moon run lib/cli -- verify DELIVERY.json
 moon run lib/cli -- changes BEFORE.delivery.json CURRENT.delivery.json
+moon run lib/cli -- check-cdx BOM.json ADVISORY.json [ADVISORY.json ...]
 moon run lib/cli -- help
 ```
 
@@ -69,6 +70,8 @@ moon run lib/cli -- help
 需要交付完整评估时，用 `capture` 生成包含清单、快照、报告和 SHA-256 摘要的交付包；`verify` 无需原始路径即可重算报告并核对内容。[交付工作流](docs/delivery.md)说明了文件保存、退出码和信任边界。生成交付包成功返回 0，验证则返回报告本身的退出码。
 
 `changes` 验证两份交付包后，列出新增命中、版本或公告变化、证据消失和不确定项。变化门禁与当前评估门禁分别保留，已有漏洞不会因为变化门禁通过而消失，详见[评估变化](docs/changes.md)。
+
+`check-cdx` 接入现有 CycloneDX 1.5/1.6 清单，当前仅精确解析默认 crates.io 的 Cargo PURL。其他组件、缺失身份和冲突字段均保留为未解析项，阻止不完整清单通过。可直接运行[三组 BOM 示例](docs/cyclonedx.md)，无需先手写本项目的清单格式。
 
 报告与快照写到 stdout，错误诊断写到 stderr。工具只读取输入文件，不修改它们。
 

@@ -19,3 +19,8 @@ only its version ranges and does not infer runtime applicability.
 examples for exercising that record. They do not describe a scanned real
 application. Other synthetic advisories in tests and the consumer example use
 the OSV `x_` local-ID prefix and fictional `example/demo` identities.
+
+`cargo.cdx.json`, `cargo-fixed.cdx.json` and `cargo-partial.cdx.json` are
+project-authored CycloneDX input examples using the same time-version boundary.
+The extra npm identity is fictional and demonstrates unresolved evidence. These
+files and all newly authored tests use the project's Apache-2.0 license.
