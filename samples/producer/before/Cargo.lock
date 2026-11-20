@@ -1,0 +1,7 @@
+# Minimal project-authored cataloger input, not a resolved application graph.
+version = 3
+
+[[package]]
+name = "time"
+version = "0.2.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"

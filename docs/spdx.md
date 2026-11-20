@@ -5,7 +5,9 @@ selects SPDX or CycloneDX from an unambiguous header. Both return `BomImport`
 and share assessment, completeness gating and SARIF export. Existing CycloneDX
 output is unchanged. This adds an assessment consumer for existing producers
 such as [cogna-dev/sbom](https://mooncakes.io/docs/cogna-dev/sbom), not an SPDX
-generator or license analyzer. No direct producer interoperability is claimed.
+generator or license analyzer. Fixed-version Syft producer interoperability is
+checked separately in [four documented cases](producer-interop.md); direct
+runtime compatibility with cogna-dev/sbom is not claimed.
 
 ```sh
 moon run lib/cli -- check-bom samples/cargo.spdx.json samples/RUSTSEC-2020-0071.json

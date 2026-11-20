@@ -54,6 +54,12 @@
 GitHub Actions uses actions/checkout, actions/setup-python and ilammy/msvc-dev-cmd (MIT) by
 reference. Their source is not redistributed in this repository.
 
+The optional producer integration invokes Syft 1.57.2 (Apache-2.0),
+https://github.com/anchore/syft/releases/tag/v1.57.2. Its Linux x86-64 download
+is checked against the SHA-256 from that release's `syft_1.57.2_checksums.txt`.
+No Syft code or binary is redistributed. Cargo lock inputs in samples/producer
+were authored here under Apache-2.0; generated BOMs remain build artifacts.
+
 Markdown behavioral references are the CommonMark 0.31.2 code-span and fenced-block
 rules, https://spec.commonmark.org/0.31.2/ (specification by John MacFarlane,
 CC BY-SA 4.0). No prose or test fixtures were copied. The independent rendering

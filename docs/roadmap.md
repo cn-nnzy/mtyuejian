@@ -31,11 +31,16 @@ changing gates, using index links and a real RustSec/GitHub dual-source example.
 Markdown review includes readable decisions, unresolved evidence, alias groups
 and a complete replayable receipt; adaptive literal delimiters are tested with
 an independent renderer and untrusted source formatting.
+The one-command review kit validates real CLI gates and writes self-contained
+receipts, reports and a byte-digest manifest. Source archives are unpacked into
+fresh directories and checked through a separate consuming module. Syft 1.57.2
+interoperability covers four generated CycloneDX/SPDX cases, retaining directory
+and file subjects as unresolved rather than silently discarding them.
 
 ## Possible subsequent capabilities
 
-1. Validate adoption with real downstream BOM producers and report consumers
-   before broadening input profiles or claiming hosted UI compatibility.
+1. Extend the fixed-version producer checks to real downstream application
+   inventories and hosted report consumers before broadening compatibility claims.
 2. Add individual ecosystem version-ordering profiles only with reference data,
    a documented identity convention and meaningful differential tests.
    npm intake requires its ECOSYSTEM ordering semantics as well as PURL identity;

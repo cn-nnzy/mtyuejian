@@ -2,7 +2,7 @@
 
 面向 MoonBit 工具开发者的离线 OSV 版本影响判定库。输入已安装的包清单和指定的漏洞公告，输出逐项判定、原始字段位置和 CI 退出码。
 
-目前为 **0.1.0 源码初版**，尚未发布到 Mooncakes。核心能力、命令和边界均在本仓库内实现；后续计划见 [路线](docs/roadmap.md)。
+目前为 **0.1.0 源码初版**，尚未发布到 Mooncakes。核心能力、命令和边界均在本仓库内实现；[初版验收](docs/initial-version.md)列出已有能力、限制和复验命令，后续计划见[路线](docs/roadmap.md)。
 
 ## 运行真实数据示例
 
@@ -38,6 +38,8 @@ moon -C examples/consumer run . --target wasm --deny-warn
 该示例会调用公开 API、断言判定结果并打印 JSON。源码版本号不表示已完成注册表发布。需要在自己的模块中集成时，可参照其 `moon.mod`、`moon.pkg` 和 `moon.work`；可执行的 API 示例见 [lib/README.mbt.md](lib/README.mbt.md)。
 
 `moon run scripts/package_smoke.mbtx` 会生成并解压源码包，在新目录中执行严格检查、Wasm 测试、消费模块和真实数据 CLI。[源码包验收](docs/source-package.md)说明环境与验证边界。
+
+[生产者联调](docs/producer-interop.md)使用固定版本 Syft 生成 CycloneDX/SPDX 后直接评估和重放，保留其目录、文件等无法判定的节点；不会因为已知依赖修复就静默忽略这些节点。
 
 库的工作流是：
 

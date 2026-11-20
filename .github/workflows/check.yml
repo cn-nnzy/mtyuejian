@@ -36,6 +36,8 @@ jobs:
         run: moon update
       - name: Format
         run: moon fmt --check
+      - name: Workflow scripts format
+        run: moon fmt --check scripts/demo.mbtx scripts/package_smoke.mbtx scripts/syft_interop.mbtx
       - name: Interfaces
         run: moon info --target all
       - name: Interface drift
@@ -61,6 +63,9 @@ jobs:
           python-version: '3.12'
       - name: Source archive adoption
         run: moon run scripts/package_smoke.mbtx
+      - name: Independent SBOM producer
+        if: runner.os == 'Linux'
+        run: moon run scripts/syft_interop.mbtx --fetch-linux
       - name: Independent report validators
         if: runner.os == 'Linux'
         run: python -m pip install --disable-pip-version-check check-jsonschema==0.39.0 commonmark==0.9.1

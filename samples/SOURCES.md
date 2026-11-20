@@ -44,3 +44,11 @@ https://raw.githubusercontent.com/github/advisory-database/main/advisories/githu
 - No changes were made. The branch URL may change; the stored bytes identify this
   fixture. Its ECOSYSTEM ranges remain unsupported and require review. Alias
   links to the RustSec sample do not erase the distinct source decisions.
+
+## Producer input fixtures
+
+`producer/before/Cargo.lock` and `producer/fixed/Cargo.lock` are project-authored
+minimal cataloger inputs (Apache-2.0), not copied Cargo resolutions. They contain
+the real package/version names used in the RustSec boundary example; they do not
+claim to describe a buildable application or complete dependency graph. The
+Syft interoperability runner generates its own BOM outputs under `_build`.

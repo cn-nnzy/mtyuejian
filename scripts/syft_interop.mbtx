@@ -1,0 +1,77 @@
+----
+import {
+  "moonbitlang/async/fs",
+  "moonbitlang/async/shell",
+  "moonbitlang/core/encoding/hex",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x/crypto",
+}
+----
+
+async fn invoke(program : String, args : Array[String], expected? : Int = 0) -> @shell.Output {
+  let result = @shell.Cmd(program, args, env={"SYFT_CHECK_FOR_APP_UPDATE": "false"}).output(timeout_ms=180000)
+  guard result.exit_code() == expected else {
+    fail("Producer integration \{program} \{Repr(args)}: expected \{expected}, got \{result.exit_code()}: \{result.stderr()}")
+  }
+  result
+}
+
+async fn fetch_linux(dir : String) -> String {
+  assert_eq(invoke("uname", ["-sm"]).stdout().trim().to_owned(), "Linux x86_64")
+  let archive = dir + "/syft.tar.gz"
+  invoke("curl", ["--fail", "--location", "--silent", "--show-error", "--max-time", "120", "--output", archive, "https://github.com/anchore/syft/releases/download/v1.57.2/syft_1.57.2_linux_amd64.tar.gz"]) |> ignore
+  let bytes = @fs.read_file(archive).binary()
+  let digest = @hex.encode(Bytes::from_array(@crypto.sha256(bytes)[:])[:])
+  assert_eq(digest, "ad92bd3ec1b94a3df01d4d0aec199afa9c42b72e86da436ff5f837914d32706b")
+  invoke("tar", ["-xzf", archive, "-C", dir, "syft"]) |> ignore
+  @fs.realpath(dir + "/syft")
+}
+
+async fn main {
+  let args = @env.args()
+  guard args.length() == 2 else {
+    fail("Usage: moon run scripts/syft_interop.mbtx SYFT_EXECUTABLE|--fetch-linux")
+  }
+  let dir = "_build/yuejian-syft-" + @env.now().to_string()
+  @fs.mkdir(dir)
+  let syft = if args[1] == "--fetch-linux" { fetch_linux(dir) } else { args[1] }
+  let version = @json.parse(invoke(syft, ["version", "--output", "json"]).stdout())
+  guard version is {"application": "syft", "version": "1.57.2", ..} else { fail("This integration requires Syft 1.57.2") }
+  @fs.write_file(dir + "/producer.json", version)
+  let cases : Array[Json] = []
+  for state in ["before", "fixed"] {
+    let prefix = dir + "/" + state
+    let generated = invoke(syft, ["scan", "dir:samples/producer/" + state, "--override-default-catalogers", "rust-cargo-lock-cataloger", "--output", "cyclonedx-json@1.6=" + prefix + ".cdx.json", "--output", "spdx-json@2.3=" + prefix + ".spdx.json"])
+    @fs.write_file(prefix + ".producer.log", generated.stderr())
+    for format in ["cdx", "spdx"] {
+      let path = prefix + "." + format + ".json"
+      let source = @fs.read_file(path).text()
+      let gate = if state == "before" { 1 } else { 3 }
+      let outcome = if state == "before" { "affected" } else { "not_matched" }
+      let cli = ["run", "lib/cli", "--"]
+      let receipt = invoke("moon", cli + ["capture-bom", path, "samples/RUSTSEC-2020-0071.json"]).stdout()
+      guard @json.parse(receipt) is {"bom": String(retained), ..} else { fail("Missing retained producer source") }
+      assert_eq(retained, source)
+      let receipt_path = path + ".delivery.json"
+      @fs.write_file(receipt_path, receipt)
+      let checked = invoke("moon", cli + ["verify-bom", receipt_path], expected=gate).stdout()
+      guard @json.parse(checked) is {
+        "exit_code": Number(actual, ..),
+        "import": {"unresolved": Array(unresolved), ..},
+        "assessment": {"decisions": Array([{"package": {"name": "time", ..}, "outcome": String(found), ..}]), ..}, ..
+      } else { fail("Producer package was not assessed") }
+      assert_eq(actual, gate.to_double())
+      assert_eq(found, outcome)
+      // Syft's directory subject (and CycloneDX file component) are not Cargo packages.
+      assert_eq(unresolved.length(), if format == "cdx" { 2 } else { 1 })
+      @fs.write_file(path + ".report.json", checked)
+      @fs.write_file(path + ".sarif.json", invoke("moon", cli + ["sarif-bom-located", path, path, "samples/RUSTSEC-2020-0071.json"], expected=gate).stdout())
+      @fs.write_file(path + ".review.md", invoke("moon", cli + ["review-bom", receipt_path]).stdout())
+      cases.push({"input": Json(state + "." + format + ".json"), "exit_code": Json(gate), "outcome": Json(outcome), "unresolved": Json(unresolved.length())})
+    }
+  }
+  @fs.write_file(dir + "/manifest.json", Json::object({"producer": version, "cases": Json(cases)}))
+  println("Syft 1.57.2: four unmodified BOMs assessed and replayed; unresolved subjects retained")
+  println("Generated evidence: " + dir)
+}
