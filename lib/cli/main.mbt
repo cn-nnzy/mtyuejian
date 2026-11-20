@@ -48,6 +48,7 @@ fn usage() -> String {
     #|  replay INVENTORY.json SNAPSHOT.json
     #|  capture INVENTORY.json ADVISORY.json [ADVISORY.json ...]
     #|  verify DELIVERY.json
+    #|  changes BEFORE.delivery.json CURRENT.delivery.json
     #|  help
     #|Reports and snapshots are JSON on stdout. Diagnostics are JSON on stderr.
     #|Exit: 0 not matched in supplied snapshot; 1 known version-range hit;
@@ -100,6 +101,13 @@ async fn execute(args : Array[String]) -> Int32 {
     let result = @audit.verify_delivery(read_file(args[1])).assessment()
     println(result.to_json().stringify())
     return result.exit_code()
+  }
+  if args.length() == 3 && args[0] == "changes" {
+    let before = @audit.verify_delivery(read_file(args[1]))
+    let current = @audit.verify_delivery(read_file(args[2]))
+    let changes = @audit.compare_deliveries(before, current)
+    println(changes.to_json().stringify())
+    return changes.exit_code()
   }
   if args.length() == 3 && args[0] == "replay" {
     let items = @audit.read_inventory(read_file(args[1]))

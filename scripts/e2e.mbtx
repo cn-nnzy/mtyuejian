@@ -1,6 +1,5 @@
 ----
 import {
-  "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/async/shell",
   "moonbitlang/core/encoding/utf8",
@@ -75,5 +74,18 @@ async fn main {
   @fs.write_file(delivery_path, @utf8.encode(unknown.stdout()))
   run(target, ["verify", delivery_path], 3) |> ignore
   run(target, ["capture", "samples/installed.json", advisory, advisory], 2) |> ignore
-  println("22 end-to-end scenarios passed on \{target}; real advisory, delivery verification, rejection and recovery verified")
+  let prior_path = temp + "/before.delivery.json"
+  @fs.write_file(prior_path, @utf8.encode(fixed.stdout()))
+  defer @fs.remove(prior_path)
+  let affected = run(target, ["capture", "samples/before-fix.json", advisory], 0)
+  @fs.write_file(delivery_path, @utf8.encode(affected.stdout()))
+  run(target, ["changes", prior_path, delivery_path], 1) |> ignore
+  run(target, ["changes", delivery_path, prior_path], 0) |> ignore
+  let retained = run(target, ["changes", delivery_path, delivery_path], 0)
+  guard @json.parse(retained.stdout()) is { "current_exit_code": Number(current_code, ..), .. } && current_code == 1.0 else { fail("delta masked absolute hit") }
+  @fs.write_file(delivery_path, b"{}")
+  run(target, ["changes", prior_path, delivery_path], 2) |> ignore
+  @fs.write_file(delivery_path, @utf8.encode(affected.stdout()))
+  run(target, ["changes", prior_path, delivery_path], 1) |> ignore
+  println("28 end-to-end scenarios passed on \{target}; delivery verification, change review, rejection and recovery verified")
 }

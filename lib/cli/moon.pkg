@@ -1,6 +1,5 @@
 import {
   "cn-nnzy/mtyuejian" @audit,
-  "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/async/stdio",
   "moonbitlang/core/buffer",

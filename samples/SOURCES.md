@@ -15,7 +15,7 @@ fixture; the download date is not a claim that it was the newest aggregated OSV
 revision. Its prose states that non-Unix targets are unaffected. The demo uses
 only its version ranges and does not infer runtime applicability.
 
-`installed.json`, `fixed.json`, and `unknown.json` are project-authored inventory
+`installed.json`, `before-fix.json`, `fixed.json`, and `unknown.json` are project-authored inventory
 examples for exercising that record. They do not describe a scanned real
 application. Other synthetic advisories in tests and the consumer example use
 the OSV `x_` local-ID prefix and fictional `example/demo` identities.

@@ -254,6 +254,26 @@ pub fn Assessment::outcomes(self : Assessment) -> Array[Outcome] {
 }
 
 ///|
+fn Decision::to_json(self : Decision) -> Json {
+  {
+    "package": self.item.to_json(),
+    "advisory": match self.advisory {
+      None => Json::null()
+      Some(id) => Json(id)
+    },
+    "outcome": Json(self.outcome.label()),
+    "incomplete": Json(self.incomplete),
+    "evidence": Json(
+      self.evidence.map(e => {
+        "path": Json(e.path),
+        "code": Json(e.code),
+        "event_indices": Json(e.indices),
+      }),
+    ),
+  }
+}
+
+///|
 pub fn Assessment::to_json(self : Assessment) -> Json {
   let counts : Map[String, Int32] = Map([])
   for outcome in [Affected, NotMatched, Undetermined, Withdrawn, NoAdvisory] {
@@ -282,23 +302,6 @@ pub fn Assessment::to_json(self : Assessment) -> Json {
         "code": Json("package-identity-missing"),
       }),
     ),
-    "decisions": Json(
-      self.decisions.map(d => {
-        "package": d.item.to_json(),
-        "advisory": match d.advisory {
-          None => Json::null()
-          Some(id) => Json(id)
-        },
-        "outcome": Json(d.outcome.label()),
-        "incomplete": Json(d.incomplete),
-        "evidence": Json(
-          d.evidence.map(e => {
-            "path": Json(e.path),
-            "code": Json(e.code),
-            "event_indices": Json(e.indices),
-          }),
-        ),
-      }),
-    ),
+    "decisions": Json(self.decisions.map(d => d.to_json())),
   }
 }

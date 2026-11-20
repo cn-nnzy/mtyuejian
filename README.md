@@ -60,12 +60,15 @@ moon run lib/cli -- snapshot ADVISORY.json [ADVISORY.json ...]
 moon run lib/cli -- replay INVENTORY.json SNAPSHOT.json
 moon run lib/cli -- capture INVENTORY.json ADVISORY.json [ADVISORY.json ...]
 moon run lib/cli -- verify DELIVERY.json
+moon run lib/cli -- changes BEFORE.delivery.json CURRENT.delivery.json
 moon run lib/cli -- help
 ```
 
 `snapshot` 把来源标记和原始公告作为 JSON 文本封装输出。保存该输出为文件后，即可用 `replay` 重新检查任意清单。快照保留未知字段、数字原始 token 和空白；它不提供签名或来源认证。
 
 需要交付完整评估时，用 `capture` 生成包含清单、快照、报告和 SHA-256 摘要的交付包；`verify` 无需原始路径即可重算报告并核对内容。[交付工作流](docs/delivery.md)说明了文件保存、退出码和信任边界。生成交付包成功返回 0，验证则返回报告本身的退出码。
+
+`changes` 验证两份交付包后，列出新增命中、版本或公告变化、证据消失和不确定项。变化门禁与当前评估门禁分别保留，已有漏洞不会因为变化门禁通过而消失，详见[评估变化](docs/changes.md)。
 
 报告与快照写到 stdout，错误诊断写到 stderr。工具只读取输入文件，不修改它们。
 
@@ -93,7 +96,7 @@ moon run lib/cli -- help
 
 ## 验证
 
-本地开发使用 `moon 0.1.20261117`、`moonc 0.10.21+06da1ed44`。CI 在 Linux、macOS、Windows 上安装当前稳定版并记录版本。
+当前开发工具链为 `moon 0.1.20261119`、`moonc 0.10.22+124d61d05`。CLI 入口使用工具链提供的 core async，文件适配使用兼容的 `moonbitlang/async@0.22.10`。CI 在 Linux、macOS、Windows 上安装当前稳定版并记录版本。
 
 ```sh
 moon fmt --check
