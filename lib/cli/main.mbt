@@ -53,6 +53,7 @@ fn usage() -> String {
     #|  check-bom BOM.json ADVISORY.json [ADVISORY.json ...]
     #|  capture-bom BOM.json ADVISORY.json [ADVISORY.json ...]
     #|  verify-bom BOM.delivery.json
+    #|  changes-bom BEFORE.bom.delivery.json CURRENT.bom.delivery.json
     #|  sarif-bom BOM.json BOM_URI ADVISORY.json [ADVISORY.json ...]
     #|  sarif DELIVERY.json INVENTORY_URI
     #|  sarif-cdx BOM.json BOM_URI ADVISORY.json [ADVISORY.json ...]
@@ -139,6 +140,13 @@ async fn execute(args : Array[String]) -> Int32 {
   }
   if args.length() == 2 && args[0] == "verify-bom" {
     let result = @audit.verify_bom_delivery(read_file(args[1])).assessment()
+    println(result.to_json().stringify())
+    return result.exit_code()
+  }
+  if args.length() == 3 && args[0] == "changes-bom" {
+    let before = @audit.verify_bom_delivery(read_file(args[1]))
+    let current = @audit.verify_bom_delivery(read_file(args[2]))
+    let result = @audit.compare_bom_deliveries(before, current)
     println(result.to_json().stringify())
     return result.exit_code()
   }

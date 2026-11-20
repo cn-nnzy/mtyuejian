@@ -47,19 +47,31 @@ fn advisory_sources(snapshot : Snapshot) -> Map[String, String] {
 /// Match exact installation ID, ecosystem, package name and primary advisory ID.
 /// Versions may change; aliases never merge rows. Removed evidence requires review.
 pub fn compare_deliveries(before : Delivery, after : Delivery) -> Changes {
+  let (entries, identities) = decision_changes(
+    before.assessment,
+    after.assessment,
+  )
+  { before, after, entries, identities, }
+}
+
+///|
+fn decision_changes(
+  before : Assessment,
+  after : Assessment,
+) -> (Array[ChangeEntry], Array[(Package, Package)]) {
   let old : Map[String, Decision] = Map([])
   let current : Map[String, Decision] = Map([])
   let keys = []
   let old_items : Map[String, Package] = Map([])
   let new_items : Map[String, Package] = Map([])
   let current_identities : Map[String, Unit] = Map([])
-  for row in before.assessment.decisions {
+  for row in before.decisions {
     let key = decision_key(row)
     old[key] = row
     keys.push(key)
     old_items[row.item.id] = row.item
   }
-  for row in after.assessment.decisions {
+  for row in after.decisions {
     let key = decision_key(row)
     current[key] = row
     if !old.contains(key) {
@@ -80,8 +92,8 @@ pub fn compare_deliveries(before : Delivery, after : Delivery) -> Changes {
       }
     }
   }
-  let old_sources = advisory_sources(before.assessment.snapshot)
-  let new_sources = advisory_sources(after.assessment.snapshot)
+  let old_sources = advisory_sources(before.snapshot)
+  let new_sources = advisory_sources(after.snapshot)
   let entries = []
   for key in keys {
     let prior = old.get(key)
@@ -135,7 +147,7 @@ pub fn compare_deliveries(before : Delivery, after : Delivery) -> Changes {
       missing,
     })
   }
-  { before, after, entries, identities, }
+  (entries, identities)
 }
 
 ///|

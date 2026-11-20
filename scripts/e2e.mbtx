@@ -140,5 +140,18 @@ async fn main {
   run(target, ["verify-bom", path], 2) |> ignore
   @fs.write_file(path, @utf8.encode(bom_receipt.stdout()))
   run(target, ["verify-bom", path], 3) |> ignore
-  println("61 end-to-end scenarios passed on \{target}; complete BOM receipts and recovery verified")
+  let hit_receipt = run(target, ["capture-bom", "samples/cargo.cdx.json", advisory], 0)
+  @fs.write_file(prior_path, @utf8.encode(fixed_receipt.stdout()))
+  @fs.write_file(path, @utf8.encode(hit_receipt.stdout()))
+  run(target, ["changes-bom", prior_path, path], 1) |> ignore
+  run(target, ["changes-bom", path, prior_path], 0) |> ignore
+  let retained_bom = run(target, ["changes-bom", path, path], 0)
+  guard @json.parse(retained_bom.stdout()) is { "current_exit_code": 1, .. } else { fail("BOM delta masked current finding") }
+  @fs.write_file(path, @utf8.encode(bom_receipt.stdout()))
+  run(target, ["changes-bom", path, prior_path], 3) |> ignore
+  @fs.write_file(path, b"{}")
+  run(target, ["changes-bom", path, prior_path], 2) |> ignore
+  @fs.write_file(path, @utf8.encode(hit_receipt.stdout()))
+  run(target, ["changes-bom", prior_path, path], 1) |> ignore
+  println("68 end-to-end scenarios passed on \{target}; full BOM comparison and recovery verified")
 }

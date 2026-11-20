@@ -18,6 +18,8 @@ SPDX 2.3 Cargo package projection shares BOM assessment and SARIF workflows;
 ambiguous identities and unexpanded external documents remain incomplete.
 Full BOM deliveries preserve unresolved components through archived, recomputed
 assessment handoffs, including SPDX and entirely unsupported inventories.
+BOM receipt comparison accounts for unresolved identities and removed unknown
+evidence, keeping the delta gate separate from the current absolute verdict.
 
 ## Possible subsequent capabilities
 
