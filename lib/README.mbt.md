@@ -44,6 +44,16 @@ test "import a Cargo BOM without losing its source" {
   )
   assert_eq(installed.length(), 1)
   assert_eq(imported.source(), raw)
+  let advisory = @mtyuejian.read_advisory(
+    "{\"id\":\"x_ARCHIVE-1\",\"modified\":\"2026-11-20T00:00:00Z\",\"affected\":[]}",
+  )
+  let receipt = @mtyuejian.capture_bom(
+    @mtyuejian.Snapshot::new([advisory]),
+    imported,
+  )
+  let restored = @mtyuejian.verify_bom_delivery(receipt.to_json().stringify())
+  assert_eq(restored.digest(), receipt.digest())
+  assert_eq(restored.assessment().exit_code(), 3) // No advisory matches time.
   assert_eq(
     @mtyuejian.read_bom(raw).inventory_json().stringify(),
     imported.inventory_json().stringify(),

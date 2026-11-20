@@ -51,6 +51,8 @@ fn usage() -> String {
     #|  changes BEFORE.delivery.json CURRENT.delivery.json
     #|  check-cdx BOM.json ADVISORY.json [ADVISORY.json ...]
     #|  check-bom BOM.json ADVISORY.json [ADVISORY.json ...]
+    #|  capture-bom BOM.json ADVISORY.json [ADVISORY.json ...]
+    #|  verify-bom BOM.delivery.json
     #|  sarif-bom BOM.json BOM_URI ADVISORY.json [ADVISORY.json ...]
     #|  sarif DELIVERY.json INVENTORY_URI
     #|  sarif-cdx BOM.json BOM_URI ADVISORY.json [ADVISORY.json ...]
@@ -123,6 +125,20 @@ async fn execute(args : Array[String]) -> Int32 {
   if args.length() >= 3 && args[0] == "check-bom" {
     let imported = @audit.read_bom(read_file(args[1]), origin=args[1])
     let result = imported.assess(snapshot_files(args[2:]))
+    println(result.to_json().stringify())
+    return result.exit_code()
+  }
+  if args.length() >= 3 && args[0] == "capture-bom" {
+    let imported = @audit.read_bom(read_file(args[1]), origin=args[1])
+    println(
+      @audit.capture_bom(snapshot_files(args[2:]), imported)
+      .to_json()
+      .stringify(),
+    )
+    return 0
+  }
+  if args.length() == 2 && args[0] == "verify-bom" {
+    let result = @audit.verify_bom_delivery(read_file(args[1])).assessment()
     println(result.to_json().stringify())
     return result.exit_code()
   }

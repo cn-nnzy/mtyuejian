@@ -63,6 +63,8 @@ moon run lib/cli -- verify DELIVERY.json
 moon run lib/cli -- changes BEFORE.delivery.json CURRENT.delivery.json
 moon run lib/cli -- check-cdx BOM.json ADVISORY.json [ADVISORY.json ...]
 moon run lib/cli -- check-bom BOM.json ADVISORY.json [ADVISORY.json ...]
+moon run lib/cli -- capture-bom BOM.json ADVISORY.json [ADVISORY.json ...]
+moon run lib/cli -- verify-bom BOM.delivery.json
 moon run lib/cli -- sarif-bom BOM.json BOM_URI ADVISORY.json [ADVISORY.json ...]
 moon run lib/cli -- sarif DELIVERY.json INVENTORY_URI
 moon run lib/cli -- sarif-cdx BOM.json BOM_URI ADVISORY.json [ADVISORY.json ...]
@@ -82,6 +84,7 @@ moon run lib/cli -- help
 报告与快照写到 stdout，错误诊断写到 stderr。工具只读取输入文件，不修改它们。
 `check-bom` / `sarif-bom` 自动识别 CycloneDX 或 SPDX 2.3，保留未解析项。
 SPDX 的单一 Cargo PURL、外部文档和身份冲突规则见 [SPDX 接入](docs/spdx.md)。
+`capture-bom` / `verify-bom` 封存并核验完整 BOM 评估，未解析组件和原始元数据也随交付包保存，见 [BOM 交付](docs/bom-delivery.md)。
 
 | 退出码 | 含义 |
 |---|---|

@@ -18,7 +18,7 @@ async fn run(target : String, args : Array[String], expected : Int) -> @shell.Ou
     assert_eq(result.stdout(), "")
   } else if ["sarif", "sarif-cdx", "sarif-bom"].contains(args[0]) {
     guard @json.parse(result.stdout()) is { "version": "2.1.0", "runs": Array([{ "properties": { "yuejian/exit_code": Number(code, ..), .. }, .. }]), .. } && code == expected.to_double() else { fail("SARIF gate disagrees with process exit") }
-  } else if !["snapshot", "capture", "help"].contains(args[0]) {
+  } else if !["snapshot", "capture", "capture-bom", "help"].contains(args[0]) {
     guard @json.parse(result.stdout()) is { "exit_code": Number(code, ..), .. } && code == expected.to_double() else { fail("exit code disagrees with report") }
   }
   result
@@ -127,5 +127,18 @@ async fn main {
   @fs.write_file(path, b"{}")
   run(target, ["check-bom", path, advisory], 2) |> ignore
   run(target, ["check-bom", "samples/cargo.spdx.json", advisory], 1) |> ignore
-  println("53 end-to-end scenarios passed on \{target}; SPDX, delivery, changes and SARIF verified")
+  let bom_receipt = run(target, ["capture-bom", "samples/cargo-partial.cdx.json", advisory], 0)
+  @fs.write_file(path, @utf8.encode(bom_receipt.stdout()))
+  run(target, ["verify-bom", path], 3) |> ignore
+  let spdx_receipt = run(target, ["capture-bom", "samples/cargo.spdx.json", advisory], 0)
+  @fs.write_file(path, @utf8.encode(spdx_receipt.stdout()))
+  run(target, ["verify-bom", path], 1) |> ignore
+  let fixed_receipt = run(target, ["capture-bom", "samples/cargo-fixed.cdx.json", advisory], 0)
+  @fs.write_file(path, @utf8.encode(fixed_receipt.stdout()))
+  run(target, ["verify-bom", path], 0) |> ignore
+  @fs.write_file(path, b"{}")
+  run(target, ["verify-bom", path], 2) |> ignore
+  @fs.write_file(path, @utf8.encode(bom_receipt.stdout()))
+  run(target, ["verify-bom", path], 3) |> ignore
+  println("61 end-to-end scenarios passed on \{target}; complete BOM receipts and recovery verified")
 }

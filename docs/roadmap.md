@@ -16,6 +16,8 @@ SARIF export reuses sarifkit to expose version findings, explicit completeness
 warnings and stable identities while retaining the full report and snapshot.
 SPDX 2.3 Cargo package projection shares BOM assessment and SARIF workflows;
 ambiguous identities and unexpanded external documents remain incomplete.
+Full BOM deliveries preserve unresolved components through archived, recomputed
+assessment handoffs, including SPDX and entirely unsupported inventories.
 
 ## Possible subsequent capabilities
 
