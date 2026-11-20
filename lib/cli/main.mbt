@@ -48,6 +48,8 @@ fn usage() -> String {
     #|  replay INVENTORY.json SNAPSHOT.json
     #|  capture INVENTORY.json ADVISORY.json [ADVISORY.json ...]
     #|  verify DELIVERY.json
+    #|  aliases DELIVERY.json
+    #|  aliases-bom BOM.delivery.json
     #|  verify --expected-sha256 SHA256 DELIVERY.json
     #|  verify-bom --expected-sha256 SHA256 BOM.delivery.json
     #|  changes --baseline-sha256 SHA256 BEFORE.delivery.json CURRENT.delivery.json
@@ -155,6 +157,16 @@ async fn execute(args : Array[String]) -> Int32 {
     let result = @audit.verify_delivery(read_file(args[1])).assessment()
     println(result.to_json().stringify())
     return result.exit_code()
+  }
+  if args.length() == 2 && args[0] == "aliases" {
+    let delivery = @audit.verify_delivery(read_file(args[1]))
+    println(delivery.alias_review().stringify())
+    return delivery.assessment().exit_code()
+  }
+  if args.length() == 2 && args[0] == "aliases-bom" {
+    let delivery = @audit.verify_bom_delivery(read_file(args[1]))
+    println(delivery.alias_review().stringify())
+    return delivery.assessment().exit_code()
   }
   if args.length() == 3 && args[0] == "changes" {
     let before = @audit.verify_delivery(read_file(args[1]))

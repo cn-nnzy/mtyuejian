@@ -14,6 +14,9 @@
   [samples/SOURCES.md](samples/SOURCES.md). Its full original attribution remains
   in the committed JSON. No vulnerability exploit or third-party application
   source is bundled.
+- GitHub Advisory Database sample `GHSA-wcg3-cvx6-7396`: CC BY 4.0.
+  Attribution, unchanged-source URL and digest are recorded in samples/SOURCES.md;
+  this fixture is outside the project's Apache-2.0 source-code license.
 - Runtime dependency `moonbitlang/async@0.22.10`: Apache-2.0,
   https://github.com/moonbitlang/async. Used by the file CLI and automation;
   the library package does not import the async runtime.

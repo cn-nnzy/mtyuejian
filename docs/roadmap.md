@@ -26,6 +26,8 @@ Ordinary parsing also bounds cumulative pointer construction before allocation,
 limiting repeated metadata path amplification without dropping fields.
 Optional independent receipt pins bind verification and delta baselines to an
 approved digest while preserving the original wire formats and verdicts.
+Alias review correlates declared identifiers without merging decisions or
+changing gates, using index links and a real RustSec/GitHub dual-source example.
 
 ## Possible subsequent capabilities
 
@@ -33,6 +35,8 @@ approved digest while preserving the original wire formats and verdicts.
    before broadening input profiles or claiming hosted UI compatibility.
 2. Add individual ecosystem version-ordering profiles only with reference data,
    a documented identity convention and meaningful differential tests.
+   npm intake requires its ECOSYSTEM ordering semantics as well as PURL identity;
+   accepting names alone is not considered a complete milestone.
 
 Git graph matching, online advisory database management, VEX policy, dependency
 resolution, automated upgrades and exploitability analysis are not implemented.

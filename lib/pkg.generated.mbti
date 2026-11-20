@@ -72,6 +72,7 @@ pub fn BomChanges::to_json(Self) -> @json.Json
 pub struct BomDelivery {
   // private fields
 }
+pub fn BomDelivery::alias_review(Self) -> @json.Json
 pub fn BomDelivery::assessment(Self) -> BomAssessment
 pub fn BomDelivery::digest(Self) -> String
 pub fn BomDelivery::to_json(Self) -> @json.Json
@@ -93,6 +94,7 @@ pub fn Changes::to_json(Self) -> @json.Json
 pub struct Delivery {
   // private fields
 }
+pub fn Delivery::alias_review(Self) -> @json.Json
 pub fn Delivery::assessment(Self) -> Assessment
 pub fn Delivery::digest(Self) -> String
 pub fn Delivery::to_json(Self) -> @json.Json
