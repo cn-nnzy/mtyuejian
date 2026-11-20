@@ -50,6 +50,8 @@ fn usage() -> String {
     #|  verify DELIVERY.json
     #|  changes BEFORE.delivery.json CURRENT.delivery.json
     #|  check-cdx BOM.json ADVISORY.json [ADVISORY.json ...]
+    #|  check-bom BOM.json ADVISORY.json [ADVISORY.json ...]
+    #|  sarif-bom BOM.json BOM_URI ADVISORY.json [ADVISORY.json ...]
     #|  sarif DELIVERY.json INVENTORY_URI
     #|  sarif-cdx BOM.json BOM_URI ADVISORY.json [ADVISORY.json ...]
     #|  help
@@ -116,6 +118,18 @@ async fn execute(args : Array[String]) -> Int32 {
     let imported = @audit.read_cyclonedx(read_file(args[1]), origin=args[1])
     let result = imported.assess(snapshot_files(args[2:]))
     println(result.to_json().stringify())
+    return result.exit_code()
+  }
+  if args.length() >= 3 && args[0] == "check-bom" {
+    let imported = @audit.read_bom(read_file(args[1]), origin=args[1])
+    let result = imported.assess(snapshot_files(args[2:]))
+    println(result.to_json().stringify())
+    return result.exit_code()
+  }
+  if args.length() >= 4 && args[0] == "sarif-bom" {
+    let imported = @audit.read_bom(read_file(args[1]), origin=args[1])
+    let result = imported.assess(snapshot_files(args[3:]))
+    println(result.to_sarif(bom_uri=args[2]).stringify())
     return result.exit_code()
   }
   if args.length() == 3 && args[0] == "sarif" {

@@ -24,3 +24,8 @@ the OSV `x_` local-ID prefix and fictional `example/demo` identities.
 project-authored CycloneDX input examples using the same time-version boundary.
 The extra npm identity is fictional and demonstrates unresolved evidence. These
 files and all newly authored tests use the project's Apache-2.0 license.
+
+`cargo.spdx.json` is a project-authored SPDX representation of the same time
+example, not output claimed from a third-party scanner. It contains no copied
+application code. The SPDX metadata is offered under CC0-1.0 as declared by its
+`dataLicense`; the authored implementation and tests use Apache-2.0.

@@ -62,6 +62,8 @@ moon run lib/cli -- capture INVENTORY.json ADVISORY.json [ADVISORY.json ...]
 moon run lib/cli -- verify DELIVERY.json
 moon run lib/cli -- changes BEFORE.delivery.json CURRENT.delivery.json
 moon run lib/cli -- check-cdx BOM.json ADVISORY.json [ADVISORY.json ...]
+moon run lib/cli -- check-bom BOM.json ADVISORY.json [ADVISORY.json ...]
+moon run lib/cli -- sarif-bom BOM.json BOM_URI ADVISORY.json [ADVISORY.json ...]
 moon run lib/cli -- sarif DELIVERY.json INVENTORY_URI
 moon run lib/cli -- sarif-cdx BOM.json BOM_URI ADVISORY.json [ADVISORY.json ...]
 moon run lib/cli -- help
@@ -78,6 +80,8 @@ moon run lib/cli -- help
 `sarif` 与 `sarif-cdx` 输出 SARIF 2.1.0，分别读取已核验交付包和 BOM。报告区分版本命中、未命中与证据缺失，保留完整报告和原始公告快照；退出码仍沿用评估门禁。运行方式、稳定标识及格式校验见 [SARIF 工作流](docs/sarif.md)。
 
 报告与快照写到 stdout，错误诊断写到 stderr。工具只读取输入文件，不修改它们。
+`check-bom` / `sarif-bom` 自动识别 CycloneDX 或 SPDX 2.3，保留未解析项。
+SPDX 的单一 Cargo PURL、外部文档和身份冲突规则见 [SPDX 接入](docs/spdx.md)。
 
 | 退出码 | 含义 |
 |---|---|

@@ -44,5 +44,9 @@ test "import a Cargo BOM without losing its source" {
   )
   assert_eq(installed.length(), 1)
   assert_eq(imported.source(), raw)
+  assert_eq(
+    @mtyuejian.read_bom(raw).inventory_json().stringify(),
+    imported.inventory_json().stringify(),
+  )
 }
 ```

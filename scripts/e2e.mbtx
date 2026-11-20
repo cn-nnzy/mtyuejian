@@ -16,7 +16,7 @@ async fn run(target : String, args : Array[String], expected : Int) -> @shell.Ou
   if expected == 2 {
     guard @json.parse(result.stderr()) is { "code": String(_), "path": String(_), "message": String(_), .. } else { fail("unstructured diagnostic") }
     assert_eq(result.stdout(), "")
-  } else if ["sarif", "sarif-cdx"].contains(args[0]) {
+  } else if ["sarif", "sarif-cdx", "sarif-bom"].contains(args[0]) {
     guard @json.parse(result.stdout()) is { "version": "2.1.0", "runs": Array([{ "properties": { "yuejian/exit_code": Number(code, ..), .. }, .. }]), .. } && code == expected.to_double() else { fail("SARIF gate disagrees with process exit") }
   } else if !["snapshot", "capture", "help"].contains(args[0]) {
     guard @json.parse(result.stdout()) is { "exit_code": Number(code, ..), .. } && code == expected.to_double() else { fail("exit code disagrees with report") }
@@ -116,5 +116,16 @@ async fn main {
   @fs.write_file("_build/yuejian-bom-sarif-example.json", @utf8.encode(bom_sarif.stdout()))
   run(target, ["sarif-cdx", "samples/cargo-partial.cdx.json", "../bom.json", advisory], 2) |> ignore
   run(target, ["sarif-cdx", path, "bom.json", advisory], 2) |> ignore
-  println("46 end-to-end scenarios passed on \{target}; delivery, changes, CycloneDX, SARIF, rejection and recovery verified")
+  run(target, ["check-bom", "samples/cargo.spdx.json", advisory], 1) |> ignore
+  run(target, ["sarif-bom", "samples/cargo.spdx.json", "samples/cargo.spdx.json", advisory], 1) |> ignore
+  run(target, ["check-bom", "samples/cargo-fixed.cdx.json", advisory], 0) |> ignore
+  let spdx = @fs.read_file("samples/cargo.spdx.json").text()
+  @fs.write_file(path, @utf8.encode(spdx.replace(old="0.2.22", new="0.2.23").replace(old="0.2.22", new="0.2.23")))
+  run(target, ["check-bom", path, advisory], 0) |> ignore
+  @fs.write_file(path, @utf8.encode(spdx.replace(old="pkg:cargo", new="pkg:npm")))
+  run(target, ["check-bom", path, advisory], 3) |> ignore
+  @fs.write_file(path, b"{}")
+  run(target, ["check-bom", path, advisory], 2) |> ignore
+  run(target, ["check-bom", "samples/cargo.spdx.json", advisory], 1) |> ignore
+  println("53 end-to-end scenarios passed on \{target}; SPDX, delivery, changes and SARIF verified")
 }

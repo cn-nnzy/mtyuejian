@@ -14,6 +14,8 @@ CycloneDX 1.5/1.6 inventory import resolves a documented Cargo-PURL subset,
 preserves original BOM text and keeps unsupported components in the outer gate.
 SARIF export reuses sarifkit to expose version findings, explicit completeness
 warnings and stable identities while retaining the full report and snapshot.
+SPDX 2.3 Cargo package projection shares BOM assessment and SARIF workflows;
+ambiguous identities and unexpanded external documents remain incomplete.
 
 ## Possible subsequent capabilities
 

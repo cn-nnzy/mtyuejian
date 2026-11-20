@@ -9,6 +9,7 @@ priv struct UnresolvedComponent {
 /// A lossless source plus a bounded Cargo-PURL inventory projection. Unresolved
 /// components remain explicit and prevent exporting a complete inventory.
 pub struct BomImport {
+  priv profile : String
   priv raw : String
   priv origin : String
   priv packages : Array[Package]
@@ -196,7 +197,13 @@ pub fn read_cyclonedx(
     unresolved.push({ path: "/components", id: None, code: "no-components", })
   }
   packages.sort_by((a, b) => text_order(a.id, b.id))
-  { raw: input, origin: nonempty(origin, "/origin"), packages, unresolved, }
+  {
+    profile: "cyclonedx-cargo-v1",
+    raw: input,
+    origin: nonempty(origin, "/origin"),
+    packages,
+    unresolved,
+  }
 }
 
 ///|
@@ -219,7 +226,7 @@ pub fn BomImport::inventory_json(self : BomImport) -> Json raise InputError {
 ///|
 pub fn BomImport::to_json(self : BomImport) -> Json {
   {
-    "profile": Json("cyclonedx-cargo-v1"),
+    "profile": Json(self.profile),
     "origin": Json(self.origin),
     "source": Json(self.raw),
     "packages": Json(self.packages.map(p => p.to_json())),

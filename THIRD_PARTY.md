@@ -34,6 +34,10 @@
   (Apache-2.0, https://github.com/python-jsonschema/check-jsonschema) is an optional
   independent validation tool used by the Linux CI job.
 - Apache-2.0 license text: https://www.apache.org/licenses/LICENSE-2.0.txt.
+- SPDX 2.3 package-information reference:
+  https://spdx.github.io/spdx-spec/v2.3/package-information/.
+  Used for a restricted Cargo inventory consumer; no upstream schema, prose,
+  implementation or test fixtures are redistributed.
 - CycloneDX 1.6 JSON reference: https://cyclonedx.org/docs/1.6/json/;
   Cargo Package URL definition:
   https://github.com/package-url/purl-spec/blob/main/docs/types/definitions/cargo-definition.md.
