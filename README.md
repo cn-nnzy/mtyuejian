@@ -89,6 +89,7 @@ moon run lib/cli -- help
 SPDX 的单一 Cargo PURL、外部文档和身份冲突规则见 [SPDX 接入](docs/spdx.md)。
 `capture-bom` / `verify-bom` 封存并核验完整 BOM 评估，未解析组件和原始元数据也随交付包保存，见 [BOM 交付](docs/bom-delivery.md)。
 `changes-bom` 比较两份完整交付包，显式报告组件身份解析变化、未知证据消失及格式迁移，见 [BOM 变化](docs/bom-changes.md)。
+需要固定已经审阅的交付包或比较基线时，可传入独立保存的 SHA-256，阻止另一份有效交付包替换它，见 [摘要固定](docs/pins.md)。
 需要在报告中定位原始版本字段时，使用 `sarif-located` 或 `sarif-bom-located`。源码先与已评估数据核对，再计算真实 UTF-16 行列，见 [源码定位](docs/source-locations.md)。
 
 | 退出码 | 含义 |

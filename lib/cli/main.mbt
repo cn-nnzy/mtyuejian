@@ -48,6 +48,10 @@ fn usage() -> String {
     #|  replay INVENTORY.json SNAPSHOT.json
     #|  capture INVENTORY.json ADVISORY.json [ADVISORY.json ...]
     #|  verify DELIVERY.json
+    #|  verify --expected-sha256 SHA256 DELIVERY.json
+    #|  verify-bom --expected-sha256 SHA256 BOM.delivery.json
+    #|  changes --baseline-sha256 SHA256 BEFORE.delivery.json CURRENT.delivery.json
+    #|  changes-bom --baseline-sha256 SHA256 BEFORE.bom.delivery.json CURRENT.bom.delivery.json
     #|  changes BEFORE.delivery.json CURRENT.delivery.json
     #|  check-cdx BOM.json ADVISORY.json [ADVISORY.json ...]
     #|  check-bom BOM.json ADVISORY.json [ADVISORY.json ...]
@@ -86,6 +90,46 @@ async fn snapshot_files(paths : ArrayView[String]) -> @audit.Snapshot {
 
 ///|
 async fn execute(args : Array[String]) -> Int32 {
+  if args.length() == 4 && args[1] == "--expected-sha256" {
+    if args[0] == "verify" {
+      let result = @audit.verify_delivery(
+        read_file(args[3]),
+        expected_sha256=args[2],
+      ).assessment()
+      println(result.to_json().stringify())
+      return result.exit_code()
+    }
+    if args[0] == "verify-bom" {
+      let result = @audit.verify_bom_delivery(
+        read_file(args[3]),
+        expected_sha256=args[2],
+      ).assessment()
+      println(result.to_json().stringify())
+      return result.exit_code()
+    }
+  }
+  if args.length() == 5 && args[1] == "--baseline-sha256" {
+    if args[0] == "changes" {
+      let before = @audit.verify_delivery(
+        read_file(args[3]),
+        expected_sha256=args[2],
+      )
+      let after = @audit.verify_delivery(read_file(args[4]))
+      let result = @audit.compare_deliveries(before, after)
+      println(result.to_json().stringify())
+      return result.exit_code()
+    }
+    if args[0] == "changes-bom" {
+      let before = @audit.verify_bom_delivery(
+        read_file(args[3]),
+        expected_sha256=args[2],
+      )
+      let after = @audit.verify_bom_delivery(read_file(args[4]))
+      let result = @audit.compare_bom_deliveries(before, after)
+      println(result.to_json().stringify())
+      return result.exit_code()
+    }
+  }
   if args.length() == 1 && ["help", "--help", "-h"].contains(args[0]) {
     println(usage())
     return 0

@@ -24,6 +24,8 @@ Optional SARIF source indexing binds complete inventories and locates version
 fields and unresolved BOM nodes in their actual retained JSON text.
 Ordinary parsing also bounds cumulative pointer construction before allocation,
 limiting repeated metadata path amplification without dropping fields.
+Optional independent receipt pins bind verification and delta baselines to an
+approved digest while preserving the original wire formats and verdicts.
 
 ## Possible subsequent capabilities
 

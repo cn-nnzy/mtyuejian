@@ -56,6 +56,13 @@ test "import a Cargo BOM without losing its source" {
   )
   let restored = @mtyuejian.verify_bom_delivery(receipt.to_json().stringify())
   assert_eq(restored.digest(), receipt.digest())
+  assert_eq(
+    @mtyuejian.verify_bom_delivery(
+      receipt.to_json().stringify(),
+      expected_sha256=receipt.digest(),
+    ).digest(),
+    receipt.digest(),
+  )
   assert_eq(@mtyuejian.compare_bom_deliveries(receipt, restored).exit_code(), 3)
   assert_eq(restored.assessment().exit_code(), 3) // No advisory matches time.
   assert_eq(

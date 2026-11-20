@@ -100,7 +100,10 @@ pub fn BomDelivery::to_json(self : BomDelivery) -> Json {
 ///|
 /// Rebuild both the resolved assessment and unresolved rows. Digest-valid invented
 /// reports are rejected; source text is retained rather than normalized.
-pub fn verify_bom_delivery(input : String) -> BomDelivery raise InputError {
+pub fn verify_bom_delivery(
+  input : String,
+  expected_sha256? : String,
+) -> BomDelivery raise InputError {
   let fields = object(read_value(input, max_units=8388608), "")
   profile(fields, [
     "schema_version", "profile", "input_profile", "bom", "origin", "snapshot", "report",
@@ -150,5 +153,6 @@ pub fn verify_bom_delivery(input : String) -> BomDelivery raise InputError {
       "report-mismatch", "/report", "Saved BOM report differs from the recomputed outer assessment",
     )
   }
+  require_delivery_pin(rebuilt.digest, expected_sha256)
   rebuilt
 }

@@ -175,5 +175,21 @@ async fn main {
   run(target, ["check-bom", path, advisory], 2) |> ignore
   run(target, ["capture-bom", path, advisory], 2) |> ignore
   run(target, ["check-bom", "samples/cargo-fixed.cdx.json", advisory], 0) |> ignore
-  println("80 end-to-end scenarios passed on \{target}; bounded metadata parsing and recovery verified")
+  guard @json.parse(captured.stdout()) is { "sha256": String(hit_pin), .. } && @json.parse(fixed.stdout()) is { "sha256": String(fixed_pin), .. } && @json.parse(bom_receipt.stdout()) is { "sha256": String(bom_pin), .. } && @json.parse(fixed_receipt.stdout()) is { "sha256": String(fixed_bom_pin), .. } else { fail("receipt digests missing") }
+  run(target, ["verify", "--expected-sha256", hit_pin, delivery_path], 1) |> ignore
+  run(target, ["verify", "--expected-sha256", fixed_pin, delivery_path], 2) |> ignore
+  run(target, ["verify", "--expected-sha256", "invalid", delivery_path], 2) |> ignore
+  @fs.write_file(path, @utf8.encode(bom_receipt.stdout()))
+  run(target, ["verify-bom", "--expected-sha256", bom_pin, path], 3) |> ignore
+  run(target, ["verify-bom", "--expected-sha256", fixed_bom_pin, path], 2) |> ignore
+  @fs.write_file(prior_path, @utf8.encode(fixed.stdout()))
+  @fs.write_file(delivery_path, @utf8.encode(affected.stdout()))
+  run(target, ["changes", "--baseline-sha256", fixed_pin, prior_path, delivery_path], 1) |> ignore
+  run(target, ["changes", "--baseline-sha256", hit_pin, prior_path, delivery_path], 2) |> ignore
+  @fs.write_file(prior_path, @utf8.encode(fixed_receipt.stdout()))
+  @fs.write_file(path, @utf8.encode(hit_receipt.stdout()))
+  run(target, ["changes-bom", "--baseline-sha256", fixed_bom_pin, prior_path, path], 1) |> ignore
+  run(target, ["changes-bom", "--baseline-sha256", bom_pin, prior_path, path], 2) |> ignore
+  run(target, ["changes-bom", "--baseline-sha256", fixed_bom_pin, prior_path, path], 1) |> ignore
+  println("90 end-to-end scenarios passed on \{target}; pinned receipts and baselines verified")
 }

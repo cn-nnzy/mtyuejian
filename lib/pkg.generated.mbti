@@ -31,9 +31,9 @@ pub fn read_snapshot(String) -> Snapshot raise InputError
 
 pub fn read_spdx(String, origin? : String) -> BomImport raise InputError
 
-pub fn verify_bom_delivery(String) -> BomDelivery raise InputError
+pub fn verify_bom_delivery(String, expected_sha256? : String) -> BomDelivery raise InputError
 
-pub fn verify_delivery(String) -> Delivery raise InputError
+pub fn verify_delivery(String, expected_sha256? : String) -> Delivery raise InputError
 
 // Errors
 pub(all) suberror InputError {

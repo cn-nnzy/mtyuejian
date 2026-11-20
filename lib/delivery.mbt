@@ -77,7 +77,10 @@ pub fn Delivery::to_json(self : Delivery) -> Json {
 ///|
 /// Check framing, input validity, canonical encoding and the freshly recomputed
 /// report. A digest-valid but invented report is rejected before it can be used.
-pub fn verify_delivery(input : String) -> Delivery raise InputError {
+pub fn verify_delivery(
+  input : String,
+  expected_sha256? : String,
+) -> Delivery raise InputError {
   let fields = object(read_value(input, max_units=8388608), "")
   profile(fields, [
     "schema_version", "profile", "inventory", "snapshot", "report", "sha256",
@@ -116,5 +119,6 @@ pub fn verify_delivery(input : String) -> Delivery raise InputError {
       "report-mismatch", "/report", "Saved report differs from the recomputed assessment",
     )
   }
+  require_delivery_pin(rebuilt.digest, expected_sha256)
   rebuilt
 }
