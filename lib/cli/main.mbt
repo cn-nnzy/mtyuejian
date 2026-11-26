@@ -27,7 +27,7 @@ async fn read_file(path : String) -> String {
         message="Input exceeds 8 MiB",
       )
     }
-    buffer.write_bytes(chunk)
+    buffer.write_bytesview(chunk)
   }
   @utf8.decode(buffer.to_bytes()) catch {
     _ =>

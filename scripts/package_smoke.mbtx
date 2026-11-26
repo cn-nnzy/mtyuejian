@@ -7,14 +7,23 @@ import {
 }
 ----
 
-async fn command(cwd : String, program : String, args : Array[String], expected? : Int = 0) -> String {
+///|
+async fn command(
+  cwd : String,
+  program : String,
+  args : Array[String],
+  expected~ : Int32 = 0,
+) -> String {
   let result = @shell.Cmd(program, args, cwd~).output(timeout_ms=180000)
   guard result.exit_code() == expected else {
-    fail("Package check \{program} \{Repr(args)}: expected \{expected}, got \{result.exit_code()}: \{result.stdout()}\n\{result.stderr()}")
+    fail(
+      "Package check \{program} \{Repr(args)}: expected \{expected}, got \{result.exit_code()}: \{result.stdout()}\n\{result.stderr()}",
+    )
   }
   result.stdout()
 }
 
+///|
 async fn main {
   let args = @env.args()
   guard args.length() <= 2 else {
@@ -32,7 +41,13 @@ async fn main {
   for absent in [".git", ".mooncakes", "_build", "target"] {
     assert_true(!@fs.exists(cwd + "/" + absent))
   }
-  for required in ["LICENSE", "THIRD_PARTY.md", "README.md", "samples/SOURCES.md", "scripts/demo.mbtx", "scripts/real_projects.mbtx", "samples/real-projects.json", "samples/RUSTSEC-2021-0139.json", "samples/RUSTSEC-2021-0145.json", "examples/consumer/moon.work"] {
+  for
+    required in [
+      "LICENSE", "THIRD_PARTY.md", "README.md", "samples/SOURCES.md", "scripts/demo.mbtx",
+      "scripts/real_projects.mbtx", "samples/real-projects.json", "samples/RUSTSEC-2021-0139.json",
+      "samples/RUSTSEC-2021-0145.json", "samples/compat/moon-20261119.delivery.json",
+      "examples/consumer/moon.work",
+    ] {
     assert_true(@fs.exists(cwd + "/" + required))
   }
   let interface = @fs.read_file(cwd + "/lib/pkg.generated.mbti").text()
@@ -42,11 +57,24 @@ async fn main {
   assert_eq(@fs.read_file(cwd + "/lib/pkg.generated.mbti").text(), interface)
   command(cwd, "moon", ["check", "--target", "all", "--deny-warn"]) |> ignore
   command(cwd, "moon", ["test", "--target", "wasm", "--deny-warn"]) |> ignore
-  command(cwd, "moon", ["-C", "examples/consumer", "run", ".", "--target", "wasm", "--deny-warn"]) |> ignore
-  let output = command(cwd, "moon", ["run", "lib/cli", "--", "check", "samples/installed.json", "samples/RUSTSEC-2020-0071.json"], expected=1)
-  guard @json.parse(output) is {"exit_code": 1, "decisions": Array(rows), ..} && rows.length() == 2 else {
+  command(cwd, "moon", [
+    "-C", "examples/consumer", "run", ".", "--target", "wasm", "--deny-warn",
+  ])
+  |> ignore
+  let output = command(
+    cwd,
+    "moon",
+    [
+      "run", "lib/cli", "--", "check", "samples/installed.json", "samples/RUSTSEC-2020-0071.json",
+    ],
+    expected=1,
+  )
+  guard @json.parse(output) is { "exit_code": 1, "decisions": Array(rows), .. } &&
+    rows.length() == 2 else {
     fail("Packaged CLI did not assess the real advisory")
   }
-  println("Source archive passed strict checks, Wasm tests, public consumer and real-advisory CLI")
+  println(
+    "Source archive passed strict checks, Wasm tests, public consumer and real-advisory CLI",
+  )
   println("Unpacked source: " + cwd)
 }

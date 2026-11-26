@@ -14,7 +14,7 @@ an end-to-end review workflow. It is a source version, not a Mooncakes release.
 | Fixed-version Syft producer integration | Four minimal cases plus eight pinned exa/zoxide BOM cases; not all producer formats or applications |
 
 The core has 139 unit/documentation tests per supported backend. The CLI runner
-checks 124 scenarios, including malformed UTF-8/JSON, recovery after errors,
+checks 128 scenarios, including malformed UTF-8/JSON, recovery after errors,
 receipt replacement/pinning, unknown BOM nodes and source location binding.
 Independent tools validate the SARIF schema and render untrusted Markdown.
 The [complete-project workflow](real-projects.md) also accounts for every lock
@@ -43,8 +43,11 @@ and independent [SARIF](sarif.md)/[Markdown](review-markdown.md) validation docu
 their additional tools. See [the CI workflow](../.github/workflows/check.yml) for
 the exact Linux, macOS and Windows jobs, including **executed** native tests and
 native CLI scenarios. A local native compilation check alone is not a native
-runtime result. Local Windows validation used MoonBit stable 0.1.20261119 with
-moonc 0.10.22+124d61d05; local native execution was not available without MSVC.
+runtime result. Local Windows validation includes moon 0.1.20261126 with moonc
+1.0.0-rc1+3c0520448, the official latest distribution on 2026-11-26. A committed
+receipt generated with moon 0.1.20261119 / moonc 0.10.22+124d61d05 checks historical
+wire compatibility, approved pin verification and regenerated JSON payloads.
+Local native execution was not available without MSVC.
 
 No network advisory synchronization, graph matching, VEX, dependency resolution,
 upgrade automation, npm ordering profile or exploitability evaluation is included.

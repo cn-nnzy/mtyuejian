@@ -131,7 +131,7 @@ SPDX 的单一 Cargo PURL、外部文档和身份冲突规则见 [SPDX 接入](d
 
 ## 验证
 
-当前开发工具链为 `moon 0.1.20261119`、`moonc 0.10.22+124d61d05`。CLI 入口使用工具链提供的 core async，文件适配使用兼容的 `moonbitlang/async@0.22.10`。CI 在 Linux、macOS、Windows 上安装当前稳定版并记录版本。
+本轮验证工具链为 `moon 0.1.20261126`、`moonc 1.0.0-rc1+3c0520448`（11 月 26 日官方 latest 分发）。CLI 入口使用工具链提供的 core async，文件适配使用 `moonbitlang/async@0.22.10`。CI 在 Linux、macOS、Windows 上安装官方默认工具链并记录版本；端到端测试另核验旧工具链生成的固定收据，检查历史摘要与报告兼容性。
 
 ```sh
 moon fmt --check

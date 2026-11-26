@@ -2,3 +2,4 @@
 samples/RUSTSEC-2020-0071.json -text
 samples/RUSTSEC-2021-0139.json -text
 samples/RUSTSEC-2021-0145.json -text
+samples/compat/moon-20261119.delivery.json -text

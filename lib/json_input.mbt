@@ -99,7 +99,8 @@ fn Reader::string(self : Reader, path : String) -> String raise InputError {
   }
   self.pos += 1
   let token = self.text[start:self.pos]
-  let decoded = @json.parse(token, max_nesting_depth=1) catch {
+  // This is one delimited string token; Reader bounds container depth itself.
+  let decoded = @json.parse(token) catch {
     _ => {
       reject(
         "invalid-json-string", path, "Invalid escape or Unicode scalar sequence",

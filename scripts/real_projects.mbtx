@@ -9,43 +9,81 @@ import {
 }
 ----
 
+///|
 fn digest(bytes : Bytes) -> String {
   @hex.encode(Bytes::from_array(@crypto.sha256(bytes)[:])[:])
 }
 
-async fn invoke(program : String, args : Array[String], expected? : Int = 0) -> String {
-  let result = @shell.Cmd(program, args, env={"SYFT_CHECK_FOR_APP_UPDATE": "false"}).output(timeout_ms=180000, max_output_bytes=16777216)
+///|
+async fn invoke(
+  program : String,
+  args : Array[String],
+  expected~ : Int32 = 0,
+) -> String {
+  let result = @shell.Cmd(program, args, env={
+    "SYFT_CHECK_FOR_APP_UPDATE": "false",
+  }).output(timeout_ms=180000, max_output_bytes=16777216)
   guard result.exit_code() == expected else {
-    fail("Real-project step \{program} \{Repr(args)}: expected exit \{expected}, got \{result.exit_code()}: \{result.stderr()}")
+    fail(
+      "Real-project step \{program} \{Repr(args)}: expected exit \{expected}, got \{result.exit_code()}: \{result.stderr()}",
+    )
   }
   result.stdout()
 }
 
-async fn cli(target : String, args : Array[String], gate : Int) -> String {
-  invoke("moon", ["run", "--target", target, "--deny-warn", "lib/cli", "--"] + args, expected=gate)
+///|
+async fn cli(target : String, args : Array[String], gate : Int32) -> String {
+  invoke(
+    "moon",
+    ["run", "--target", target, "--deny-warn", "lib/cli", "--"] + args,
+    expected=gate,
+  )
 }
 
-async fn save(dir : String, path : String, data : String, artifacts : Array[Json]) -> Unit {
+///|
+async fn save(
+  dir : String,
+  path : String,
+  data : String,
+  artifacts : Array[Json],
+) -> Unit {
   @fs.write_file(dir + "/" + path, data)
-  artifacts.push({"path": Json(path), "sha256": Json(digest(@fs.read_file(dir + "/" + path).binary()))})
+  artifacts.push({
+    "path": Json(path),
+    "sha256": Json(digest(@fs.read_file(dir + "/" + path).binary())),
+  })
 }
 
+///|
 fn string_field(value : Json, key : String) -> String raise {
-  guard value is Object(fields) && fields.get(key) is Some(String(text)) else { fail("Missing text field: " + key) }
+  guard value is Object(fields) && fields.get(key) is Some(String(text)) else {
+    fail("Missing text field: " + key)
+  }
   text
 }
 
+///|
 async fn fetch_syft(dir : String) -> String {
   assert_eq(invoke("uname", ["-sm"]).trim().to_owned(), "Linux x86_64")
   let archive = dir + "/syft.tar.gz"
-  invoke("curl", ["--fail", "--location", "--silent", "--show-error", "--max-time", "120", "--output", archive, "https://github.com/anchore/syft/releases/download/v1.57.2/syft_1.57.2_linux_amd64.tar.gz"]) |> ignore
-  assert_eq(digest(@fs.read_file(archive).binary()), "ad92bd3ec1b94a3df01d4d0aec199afa9c42b72e86da436ff5f837914d32706b")
+  invoke("curl", [
+    "--fail", "--location", "--silent", "--show-error", "--max-time", "120", "--output",
+    archive, "https://github.com/anchore/syft/releases/download/v1.57.2/syft_1.57.2_linux_amd64.tar.gz",
+  ])
+  |> ignore
+  assert_eq(
+    digest(@fs.read_file(archive).binary()),
+    "ad92bd3ec1b94a3df01d4d0aec199afa9c42b72e86da436ff5f837914d32706b",
+  )
   invoke("tar", ["-xzf", archive, "-C", dir, "syft"]) |> ignore
   @fs.realpath(dir + "/syft")
 }
 
+///|
 async fn checked_path(dir : String, path : String) -> String {
-  guard !path.is_empty() && !path.contains("\\") && !path.contains(":") &&
+  guard !path.is_empty() &&
+    !path.contains("\\") &&
+    !path.contains(":") &&
     path.split("/").all(part => !part.is_empty() && part != "." && part != "..") else {
     fail("Artifact path must be a confined relative path")
   }
@@ -54,79 +92,177 @@ async fn checked_path(dir : String, path : String) -> String {
   guard resolved.has_prefix(root + "/") || resolved.has_prefix(root + "\\") else {
     fail("Artifact path escapes the review directory")
   }
-  guard @fs.file_size(resolved) <= 16777216L else { fail("Artifact exceeds the 16 MiB replay limit") }
+  guard @fs.file_size(resolved) <= 16777216L else {
+    fail("Artifact exceeds the 16 MiB replay limit")
+  }
   resolved
 }
 
-async fn verify_manifest(dir : String, manifest : Json, target : String) -> Unit {
-  guard manifest is {"profile": "real-project-review-v1", "artifacts": Array(artifacts), "cases": Array(cases), "changes": Array(changes), ..} && cases.length() == 8 && changes.length() == 4 else { fail("Incomplete real-project manifest") }
+///|
+async fn verify_manifest(
+  dir : String,
+  manifest : Json,
+  target : String,
+) -> Unit {
+  guard manifest
+    is {
+      "profile": "real-project-review-v1",
+      "artifacts": Array(artifacts),
+      "cases": Array(cases),
+      "changes": Array(changes),
+      ..
+    } &&
+    cases.length() == 8 &&
+    changes.length() == 4 else {
+    fail("Incomplete real-project manifest")
+  }
   for artifact in artifacts {
     let path = checked_path(dir, string_field(artifact, "path"))
-    assert_eq(digest(@fs.read_file(path).binary()), string_field(artifact, "sha256"))
+    assert_eq(
+      digest(@fs.read_file(path).binary()),
+      string_field(artifact, "sha256"),
+    )
   }
   for entry in cases {
-    guard entry is {"gate": Number(gate, ..), ..} && (gate == 1.0 || gate == 3.0) else { fail("Invalid case gate") }
+    guard entry is { "gate": Number(gate, ..), .. } &&
+      (gate == 1.0 || gate == 3.0) else {
+      fail("Invalid case gate")
+    }
     let receipt = checked_path(dir, string_field(entry, "receipt"))
     let report = checked_path(dir, string_field(entry, "report"))
     let coverage = checked_path(dir, string_field(entry, "coverage"))
     let pin = string_field(entry, "receipt_sha256")
-    assert_eq(cli(target, ["verify-bom", "--expected-sha256", pin, receipt], gate.to_int()), @fs.read_file(report).text())
-    assert_eq(cli(target, ["coverage-bom", "--expected-sha256", pin, receipt], gate.to_int()), @fs.read_file(coverage).text())
+    assert_eq(
+      cli(
+        target,
+        ["verify-bom", "--expected-sha256", pin, receipt],
+        gate.to_int(),
+      ),
+      @fs.read_file(report).text(),
+    )
+    assert_eq(
+      cli(
+        target,
+        ["coverage-bom", "--expected-sha256", pin, receipt],
+        gate.to_int(),
+      ),
+      @fs.read_file(coverage).text(),
+    )
   }
   for entry in changes {
     let before = checked_path(dir, string_field(entry, "before"))
     let after = checked_path(dir, string_field(entry, "after"))
     let report = checked_path(dir, string_field(entry, "report"))
-    assert_eq(cli(target, ["changes-bom", "--baseline-sha256", string_field(entry, "baseline_sha256"), before, after], 3), @fs.read_file(report).text())
+    assert_eq(
+      cli(
+        target,
+        [
+          "changes-bom",
+          "--baseline-sha256",
+          string_field(entry, "baseline_sha256"),
+          before,
+          after,
+        ],
+        3,
+      ),
+      @fs.read_file(report).text(),
+    )
   }
-  println("Offline replay verified eight receipts, coverage views and four upgrade comparisons")
+  println(
+    "Offline replay verified eight receipts, coverage views and four upgrade comparisons",
+  )
 }
 
+///|
 async fn replay(dir : String, target : String) -> Unit {
   let path = checked_path(dir, "manifest.json")
-  verify_manifest(dir, @json.parse(@fs.read_file(path).text(), reject_duplicate_keys=true), target)
+  verify_manifest(
+    dir,
+    @json.parse(@fs.read_file(path).text(), reject_duplicate_keys=true),
+    target,
+  )
 }
 
-async fn negative_replay_checks(dir : String, manifest : Json, target : String) -> Unit {
+///|
+async fn negative_replay_checks(
+  dir : String,
+  manifest : Json,
+  target : String,
+) -> Unit {
   for mode in ["digest", "path", "case_path"] {
     let modified = @json.parse(manifest.stringify())
-    guard modified is {"artifacts": Array([Object(first), ..]), "cases": Array([Object(entry), ..]), ..} else { fail("Missing replay fixtures") }
-    if mode == "digest" { first["sha256"] = Json("0".repeat(64)) }
-    else if mode == "path" { first["path"] = Json("../outside-review") }
-    else { entry["receipt"] = Json("../outside-review") }
+    guard modified
+      is {
+        "artifacts": Array([Object(first), ..]),
+        "cases": Array([Object(entry), ..]),
+        ..
+      } else {
+      fail("Missing replay fixtures")
+    }
+    if mode == "digest" {
+      first["sha256"] = Json("0".repeat(64))
+    } else if mode == "path" {
+      first["path"] = Json("../outside-review")
+    } else {
+      entry["receipt"] = Json("../outside-review")
+    }
     try verify_manifest(dir, modified, target) catch {
       _ => ()
-    } noraise { _ => fail("Invalid replay input was accepted: " + mode) }
+    } noraise {
+      _ => fail("Invalid replay input was accepted: " + mode)
+    }
   }
 }
 
+///|
 async fn main {
   let args = @env.args()
   if args.get(1) == Some("--replay") {
-    guard args.length() == 3 || args.length() == 4 else { fail("Usage: --replay REVIEW_DIRECTORY [wasm|native]") }
+    guard args.length() == 3 || args.length() == 4 else {
+      fail("Usage: --replay REVIEW_DIRECTORY [wasm|native]")
+    }
     let target = args.get(3).unwrap_or("wasm")
-    guard ["wasm", "native"].contains(target) else { fail("Unsupported CLI target") }
+    guard ["wasm", "native"].contains(target) else {
+      fail("Unsupported CLI target")
+    }
     replay(args[2], target)
     return
   }
-  guard args.length() == 2 || args.length() == 3 else { fail("Usage: moon run scripts/real_projects.mbtx SYFT_EXECUTABLE|--fetch-linux [wasm|native]") }
+  guard args.length() == 2 || args.length() == 3 else {
+    fail(
+      "Usage: moon run scripts/real_projects.mbtx SYFT_EXECUTABLE|--fetch-linux [wasm|native]",
+    )
+  }
   let target = args.get(2).unwrap_or("wasm")
-  guard ["wasm", "native"].contains(target) else { fail("Unsupported CLI target") }
+  guard ["wasm", "native"].contains(target) else {
+    fail("Unsupported CLI target")
+  }
   let dir = "_build/yuejian-real-projects-" + @env.now().to_string()
   @fs.mkdir(dir)
   @fs.mkdir(dir + "/sources")
   let syft = if args[1] == "--fetch-linux" { fetch_syft(dir) } else { args[1] }
   let producer = @json.parse(invoke(syft, ["version", "--output", "json"]))
-  guard producer is {"application": "syft", "version": "1.57.2", ..} else { fail("Syft 1.57.2 is required") }
+  guard producer is { "application": "syft", "version": "1.57.2", .. } else {
+    fail("Syft 1.57.2 is required")
+  }
   let artifacts : Array[Json] = []
   let cases : Array[Json] = []
   let changes : Array[Json] = []
   let configuration = @fs.read_file("samples/real-projects.json").json()
-  guard configuration is {"schema_version": 1, "projects": Array(projects), ..} && projects.length() == 2 else { fail("Expected two pinned project profiles") }
-  let advisories = ["samples/RUSTSEC-2021-0145.json", "samples/RUSTSEC-2021-0139.json"]
+  guard configuration
+    is { "schema_version": 1, "projects": Array(projects), .. } &&
+    projects.length() == 2 else {
+    fail("Expected two pinned project profiles")
+  }
+  let advisories = [
+    "samples/RUSTSEC-2021-0145.json", "samples/RUSTSEC-2021-0139.json",
+  ]
   for project in projects {
     let name = string_field(project, "name")
-    guard project is {"revisions": Array(revisions), ..} && revisions.length() == 2 else { fail("Expected before and after revisions") }
+    guard project is { "revisions": Array(revisions), .. } &&
+      revisions.length() == 2 else {
+      fail("Expected before and after revisions")
+    }
     let baselines : Map[String, (String, String)] = Map([])
     for revision in revisions {
       let version = string_field(revision, "version")
@@ -134,75 +270,272 @@ async fn main {
       let stem = name + "-" + version
       let source = dir + "/sources/" + stem
       invoke("git", ["init", "--quiet", source]) |> ignore
-      invoke("git", ["-C", source, "fetch", "--quiet", "--depth", "1", string_field(project, "repository"), commit]) |> ignore
-      invoke("git", ["-c", "core.autocrlf=false", "-c", "core.eol=lf", "-C", source, "checkout", "--quiet", "--detach", "FETCH_HEAD"]) |> ignore
-      assert_eq(invoke("git", ["-C", source, "rev-parse", "HEAD"]).trim().to_owned(), commit)
-      for (file, expected) in [("Cargo.lock", string_field(revision, "lock_sha256")), ("Cargo.toml", string_field(revision, "manifest_sha256")), (string_field(project, "license_file"), string_field(project, "license_sha256"))] {
+      invoke("git", [
+        "-C",
+        source,
+        "fetch",
+        "--quiet",
+        "--depth",
+        "1",
+        string_field(project, "repository"),
+        commit,
+      ])
+      |> ignore
+      invoke("git", [
+        "-c", "core.autocrlf=false", "-c", "core.eol=lf", "-C", source, "checkout",
+        "--quiet", "--detach", "FETCH_HEAD",
+      ])
+      |> ignore
+      assert_eq(
+        invoke("git", ["-C", source, "rev-parse", "HEAD"]).trim().to_owned(),
+        commit,
+      )
+      for
+        (file, expected) in [
+          ("Cargo.lock", string_field(revision, "lock_sha256")),
+          ("Cargo.toml", string_field(revision, "manifest_sha256")),
+          (
+            string_field(project, "license_file"),
+            string_field(project, "license_sha256"),
+          ),
+        ] {
         assert_eq(digest(@fs.read_file(source + "/" + file).binary()), expected)
       }
       // This is a check on the four pinned files, not a general TOML parser.
-      let lock_count = @fs.read_file(source + "/Cargo.lock").text().split("\n").filter(line => line.trim() == "[[package]]").count()
-      invoke(syft, ["scan", "dir:" + source, "--source-name", name, "--source-version", version, "--override-default-catalogers", "rust-cargo-lock-cataloger", "--select-catalogers=-file", "--exclude", "**/.git/**", "--output", "syft-json=" + dir + "/" + stem + ".syft.json", "--output", "cyclonedx-json@1.6=" + dir + "/" + stem + ".cdx.json", "--output", "spdx-json@2.3=" + dir + "/" + stem + ".spdx.json"]) |> ignore
+      let lock_count = @fs.read_file(source + "/Cargo.lock")
+        .text()
+        .split("\n")
+        .filter(line => line.trim() == "[[package]]")
+        .count()
+      invoke(syft, [
+        "scan",
+        "dir:" + source,
+        "--source-name",
+        name,
+        "--source-version",
+        version,
+        "--override-default-catalogers",
+        "rust-cargo-lock-cataloger",
+        "--select-catalogers=-file",
+        "--exclude",
+        "**/.git/**",
+        "--output",
+        "syft-json=" + dir + "/" + stem + ".syft.json",
+        "--output",
+        "cyclonedx-json@1.6=" + dir + "/" + stem + ".cdx.json",
+        "--output",
+        "spdx-json@2.3=" + dir + "/" + stem + ".spdx.json",
+      ])
+      |> ignore
       let syft_text = @fs.read_file(dir + "/" + stem + ".syft.json").text()
       save(dir, stem + ".syft.json", syft_text, artifacts)
-      guard @json.parse(syft_text) is {"artifacts": Array(catalog), ..} && catalog.length() == lock_count else { fail("Producer did not account for every pinned lock package") }
-      let identities = catalog.map(item => Json([Json(string_field(item, "name")), Json(string_field(item, "version"))]).stringify())
+      guard @json.parse(syft_text) is { "artifacts": Array(catalog), .. } &&
+        catalog.length() == lock_count else {
+        fail("Producer did not account for every pinned lock package")
+      }
+      let identities = catalog.map(item => {
+        Json([
+          Json(string_field(item, "name")),
+          Json(string_field(item, "version")),
+        ]).stringify()
+      })
       identities.sort()
-      guard revision is {"gate": Number(expected_gate, ..), "known_packages": Array(expected_names), ..} else { fail("Missing expected case results") }
+      guard revision
+        is {
+          "gate": Number(expected_gate, ..),
+          "known_packages": Array(expected_names),
+          ..
+        } else {
+        fail("Missing expected case results")
+      }
       for format in ["cdx", "spdx"] {
         let file = stem + "." + format + ".json"
         let bom = @fs.read_file(dir + "/" + file).text()
         save(dir, file, bom, artifacts)
         let receipt_file = file + ".delivery.json"
-        let receipt = cli(target, ["capture-bom", dir + "/" + file] + advisories, 0)
-        guard @json.parse(receipt) is {"bom": String(retained), "sha256": String(pin), ..} && retained == bom else { fail("Producer BOM was changed") }
+        let receipt = cli(
+          target,
+          ["capture-bom", dir + "/" + file] + advisories,
+          0,
+        )
+        guard @json.parse(receipt)
+          is { "bom": String(retained), "sha256": String(pin), .. } &&
+          retained == bom else {
+          fail("Producer BOM was changed")
+        }
         save(dir, receipt_file, receipt, artifacts)
         let report_file = file + ".report.json"
-        let report = cli(target, ["verify-bom", "--expected-sha256", pin, dir + "/" + receipt_file], expected_gate.to_int())
+        let report = cli(
+          target,
+          ["verify-bom", "--expected-sha256", pin, dir + "/" + receipt_file],
+          expected_gate.to_int(),
+        )
         save(dir, report_file, report, artifacts)
-        guard @json.parse(report) is {"import": {"packages": Array(packages), "unresolved": Array(unresolved), ..}, "assessment": {"decisions": Array(decisions), ..}, ..} && packages.length() + unresolved.length() == lock_count + 1 else { fail("Package or directory evidence was dropped") }
+        guard @json.parse(report)
+          is {
+            "import": {
+              "packages": Array(packages),
+              "unresolved": Array(unresolved),
+              ..
+            },
+            "assessment": { "decisions": Array(decisions), .. },
+            ..
+          } &&
+          packages.length() + unresolved.length() == lock_count + 1 else {
+          fail("Package or directory evidence was dropped")
+        }
         let producer_rows = if format == "cdx" {
-          guard @json.parse(bom) is {"components": Array(entries), ..} else { fail("Missing CycloneDX package nodes") }
+          guard @json.parse(bom) is { "components": Array(entries), .. } else {
+            fail("Missing CycloneDX package nodes")
+          }
           entries
         } else {
-          guard @json.parse(bom) is {"packages": Array(entries), ..} else { fail("Missing SPDX package nodes") }
+          guard @json.parse(bom) is { "packages": Array(entries), .. } else {
+            fail("Missing SPDX package nodes")
+          }
           // Syft's directory subject stays unresolved in the assessment. Only
           // the source-catalog accounting separates that subject from lock entries.
-          let subjects = entries.filter(item => item is {"primaryPackagePurpose": "FILE", ..})
+          let subjects = entries.filter(item => {
+            item is { "primaryPackagePurpose": "FILE", .. }
+          })
           assert_eq(subjects.length(), 1)
-          entries.filter(item => !(item is {"primaryPackagePurpose": "FILE", ..}))
+          entries.filter(item => {
+            !(item is { "primaryPackagePurpose": "FILE", .. })
+          })
         }
-        let accounted = producer_rows.map(item => Json([Json(string_field(item, "name")), Json(string_field(item, if format == "cdx" { "version" } else { "versionInfo" }))]).stringify())
+        let accounted = producer_rows.map(item => {
+          Json([
+            Json(string_field(item, "name")),
+            Json(
+              string_field(
+                item,
+                if format == "cdx" {
+                  "version"
+                } else {
+                  "versionInfo"
+                },
+              ),
+            ),
+          ]).stringify()
+        })
         accounted.sort()
         assert_eq(accounted, identities)
-        let matched = decisions.filter(item => item is {"outcome": "affected", ..}).map(item => {
-          guard item is {"package": package_info, ..} else { fail("Missing decision package") }
-          Json(string_field(package_info, "name"))
-        })
+        let matched = decisions
+          .filter(item => item is { "outcome": "affected", .. })
+          .map(item => {
+            guard item is { "package": package_info, .. } else {
+              fail("Missing decision package")
+            }
+            Json(string_field(package_info, "name"))
+          })
         assert_eq(matched, expected_names)
         let coverage_file = file + ".coverage.json"
-        let coverage = cli(target, ["coverage-bom", dir + "/" + receipt_file], expected_gate.to_int())
+        let coverage = cli(
+          target,
+          ["coverage-bom", dir + "/" + receipt_file],
+          expected_gate.to_int(),
+        )
         save(dir, coverage_file, coverage, artifacts)
-        guard @json.parse(coverage) is {"counts": counts, ..} else { fail("Missing coverage summary") }
-        save(dir, file + ".sarif.json", cli(target, ["sarif-bom-located", dir + "/" + file, file] + advisories, expected_gate.to_int()), artifacts)
-        save(dir, file + ".review.md", cli(target, ["review-bom", dir + "/" + receipt_file], 0), artifacts)
-        cases.push({"project": Json(name), "version": Json(version), "commit": Json(commit), "format": Json(format), "gate": Json(expected_gate.to_int()), "lock_packages": Json(lock_count), "coverage_counts": counts, "receipt": Json(receipt_file), "receipt_sha256": Json(pin), "report": Json(report_file), "coverage": Json(coverage_file)})
+        guard @json.parse(coverage) is { "counts": counts, .. } else {
+          fail("Missing coverage summary")
+        }
+        save(
+          dir,
+          file + ".sarif.json",
+          cli(
+            target,
+            ["sarif-bom-located", dir + "/" + file, file] + advisories,
+            expected_gate.to_int(),
+          ),
+          artifacts,
+        )
+        save(
+          dir,
+          file + ".review.md",
+          cli(target, ["review-bom", dir + "/" + receipt_file], 0),
+          artifacts,
+        )
+        cases.push({
+          "project": Json(name),
+          "version": Json(version),
+          "commit": Json(commit),
+          "format": Json(format),
+          "gate": Json(expected_gate.to_int()),
+          "lock_packages": Json(lock_count),
+          "coverage_counts": counts,
+          "receipt": Json(receipt_file),
+          "receipt_sha256": Json(pin),
+          "report": Json(report_file),
+          "coverage": Json(coverage_file),
+        })
         if baselines.get(format) is Some((before, baseline_pin)) {
           let change_file = name + "." + format + ".changes.json"
-          save(dir, change_file, cli(target, ["changes-bom", "--baseline-sha256", baseline_pin, dir + "/" + before, dir + "/" + receipt_file], 3), artifacts)
-          changes.push({"before": Json(before), "after": Json(receipt_file), "baseline_sha256": Json(baseline_pin), "report": Json(change_file), "gate": 3})
-        } else { baselines[format] = (receipt_file, pin) }
-        println(stem + " " + format + ": lock=" + lock_count.to_string() + ", resolved=" + packages.length().to_string() + ", unresolved=" + unresolved.length().to_string() + ", gate=" + expected_gate.to_int().to_string())
+          save(
+            dir,
+            change_file,
+            cli(
+              target,
+              [
+                "changes-bom",
+                "--baseline-sha256",
+                baseline_pin,
+                dir + "/" + before,
+                dir + "/" + receipt_file,
+              ],
+              3,
+            ),
+            artifacts,
+          )
+          changes.push({
+            "before": Json(before),
+            "after": Json(receipt_file),
+            "baseline_sha256": Json(baseline_pin),
+            "report": Json(change_file),
+            "gate": 3,
+          })
+        } else {
+          baselines[format] = (receipt_file, pin)
+        }
+        println(
+          stem +
+          " " +
+          format +
+          ": lock=" +
+          lock_count.to_string() +
+          ", resolved=" +
+          packages.length().to_string() +
+          ", unresolved=" +
+          unresolved.length().to_string() +
+          ", gate=" +
+          expected_gate.to_int().to_string(),
+        )
       }
     }
   }
-  save(dir, "project-sources.json", configuration.stringify(indent=2), artifacts)
+  save(
+    dir,
+    "project-sources.json",
+    configuration.stringify(indent=2),
+    artifacts,
+  )
   @fs.mkdir(dir + "/samples")
   for path in ["LICENSE", "THIRD_PARTY.md", "samples/SOURCES.md"] + advisories {
     save(dir, path, @fs.read_file(path).text(), artifacts)
   }
-  save(dir, "README.md", "# Real-project version-evidence review\n\nThis kit retains all package nodes from four pinned Cargo lock files. Only the two included OSV records were assessed. Missing records and unsupported nodes stay incomplete; no exploitability or current-project security claim is made.\n\nFrom a Yuejian checkout with dependencies installed, run:\n\n    moon run scripts/real_projects.mbtx --replay REVIEW_DIRECTORY\n\nReplay requires neither Git nor Syft and does not download advisory data. manifest.json records artifact byte hashes, receipt pins, source commits and coverage counts. It is not signed; use independent trusted receipt pins for approval. Original upstream MIT notices remain in sources/.\n", artifacts)
-  let manifest : Json = {"schema_version": 1, "profile": "real-project-review-v1", "scope": "all packages in pinned lock files, including development and target-specific entries; selected advisories only; no built or deployed inventory claim", "producer": producer, "target": Json(target), "cases": Json(cases), "changes": Json(changes), "artifacts": Json(artifacts)}
+  save(
+    dir, "README.md", "# Real-project version-evidence review\n\nThis kit retains all package nodes from four pinned Cargo lock files. Only the two included OSV records were assessed. Missing records and unsupported nodes stay incomplete; no exploitability or current-project security claim is made.\n\nFrom a Yuejian checkout with dependencies installed, run:\n\n    moon run scripts/real_projects.mbtx --replay REVIEW_DIRECTORY\n\nReplay requires neither Git nor Syft and does not download advisory data. manifest.json records artifact byte hashes, receipt pins, source commits and coverage counts. It is not signed; use independent trusted receipt pins for approval. Original upstream MIT notices remain in sources/.\n",
+    artifacts,
+  )
+  let manifest : Json = {
+    "schema_version": 1,
+    "profile": "real-project-review-v1",
+    "scope": "all packages in pinned lock files, including development and target-specific entries; selected advisories only; no built or deployed inventory claim",
+    "producer": producer,
+    "target": Json(target),
+    "cases": Json(cases),
+    "changes": Json(changes),
+    "artifacts": Json(artifacts),
+  }
   verify_manifest(dir, manifest, target)
   negative_replay_checks(dir, manifest, target)
   // A correct input must still replay after all three rejection cases.
