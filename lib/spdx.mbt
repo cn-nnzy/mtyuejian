@@ -53,6 +53,11 @@ pub fn read_spdx(
     }
     let name = optional_text(item, "name", path)
     let version = optional_text(item, "versionInfo", path)
+    // Diagnostic metadata must not change admission of an otherwise opaque field.
+    let component_kind = match item.get("primaryPackagePurpose") {
+      Some(Text(kind)) => Some(kind)
+      _ => None
+    }
     let purls = []
     for j, external in optional_list(item, "externalRefs", path, 64) {
       let ref_path = pointer(pointer(path, "externalRefs"), j.to_string())
@@ -99,7 +104,7 @@ pub fn read_spdx(
       }
     }
     if issue is Some(code) {
-      unresolved.push({ path, id, code, })
+      unresolved.push({ path, id, code, component_kind, })
     }
   }
   for i, value in optional_list(fields, "externalDocumentRefs", "", 64) {
@@ -116,10 +121,20 @@ pub fn read_spdx(
       }
       ids[id] = ()
     }
-    unresolved.push({ path, id, code: "external-document-not-expanded", })
+    unresolved.push({
+      path,
+      id,
+      code: "external-document-not-expanded",
+      component_kind: None,
+    })
   }
   if packages.is_empty() && unresolved.is_empty() {
-    unresolved.push({ path: "/packages", id: None, code: "no-packages", })
+    unresolved.push({
+      path: "/packages",
+      id: None,
+      code: "no-packages",
+      component_kind: None,
+    })
   }
   packages.sort_by((a, b) => text_order(a.id, b.id))
   {

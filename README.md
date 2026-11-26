@@ -102,6 +102,7 @@ SPDX 的单一 Cargo PURL、外部文档和身份冲突规则见 [SPDX 接入](d
 需要固定已经审阅的交付包或比较基线时，可传入独立保存的 SHA-256，阻止另一份有效交付包替换它，见 [摘要固定](docs/pins.md)。
 `aliases` / `aliases-bom` 按公告声明的标识关联来源，保留全部判定和不确定证据；真实 RustSec 与 GitHub 双源示例见 [别名审查](docs/alias-review.md)。
 `review` / `review-bom` 生成可读的 Markdown 审查报告，末尾包含完整交付包，便于审阅后核验和重放，见 [审查报告](docs/review-markdown.md)。报告生成成功返回 0，原始评估门禁在正文中保留。
+`coverage` / `coverage-bom` 核验收据后，按安装实例统计已命中、未命中、缺少公告及无法判定的包，并为每项不完整证据列出来源、位置和下一步操作；[覆盖诊断](docs/coverage.md)说明计数与完整性规则。
 需要在报告中定位原始版本字段时，使用 `sarif-located` 或 `sarif-bom-located`。源码先与已评估数据核对，再计算真实 UTF-16 行列，见 [源码定位](docs/source-locations.md)。
 
 | 退出码 | 含义 |

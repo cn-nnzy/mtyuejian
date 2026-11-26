@@ -13,8 +13,8 @@ an end-to-end review workflow. It is a source version, not a Mooncakes release.
 | Public consumer, complete demo kit and archive smoke check | Dependency acquisition still uses the MoonBit cache/registry |
 | Fixed-version Syft producer integration | Four documented cases; not all producer formats or applications |
 
-The core has 130 unit/documentation tests per supported backend. The CLI runner
-checks 112 scenarios, including malformed UTF-8/JSON, recovery after errors,
+The core has 139 unit/documentation tests per supported backend. The CLI runner
+checks 124 scenarios, including malformed UTF-8/JSON, recovery after errors,
 receipt replacement/pinning, unknown BOM nodes and source location binding.
 Independent tools validate the SARIF schema and render untrusted Markdown.
 

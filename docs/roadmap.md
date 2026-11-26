@@ -36,6 +36,9 @@ receipts, reports and a byte-digest manifest. Source archives are unpacked into
 fresh directories and checked through a separate consuming module. Syft 1.57.2
 interoperability covers four generated CycloneDX/SPDX cases, retaining directory
 and file subjects as unresolved rather than silently discarding them.
+Coverage review counts installation IDs independently of source decisions and
+provides source-linked next steps for each incomplete-evidence category, without
+changing saved receipt formats or hiding unresolved artifacts.
 
 ## Possible subsequent capabilities
 

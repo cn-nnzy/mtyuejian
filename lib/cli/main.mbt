@@ -48,6 +48,10 @@ fn usage() -> String {
     #|  replay INVENTORY.json SNAPSHOT.json
     #|  capture INVENTORY.json ADVISORY.json [ADVISORY.json ...]
     #|  verify DELIVERY.json
+    #|  coverage DELIVERY.json
+    #|  coverage-bom BOM.delivery.json
+    #|  coverage --expected-sha256 SHA256 DELIVERY.json
+    #|  coverage-bom --expected-sha256 SHA256 BOM.delivery.json
     #|  aliases DELIVERY.json
     #|  aliases-bom BOM.delivery.json
     #|  review DELIVERY.json
@@ -96,6 +100,32 @@ async fn snapshot_files(paths : ArrayView[String]) -> @audit.Snapshot {
 
 ///|
 async fn execute(args : Array[String]) -> Int32 {
+  if (
+      args.length() == 2 ||
+      (args.length() == 4 && args[1] == "--expected-sha256")
+    ) &&
+    (args[0] == "coverage" || args[0] == "coverage-bom") {
+    let path = args[args.length() - 1]
+    let pin = if args.length() == 4 { Some(args[2]) } else { None }
+    let view = if args[0] == "coverage" {
+      let delivery = @audit.verify_delivery(
+        read_file(path),
+        expected_sha256?=pin,
+      )
+      delivery.assessment().coverage()
+    } else {
+      let delivery = @audit.verify_bom_delivery(
+        read_file(path),
+        expected_sha256?=pin,
+      )
+      delivery.assessment().coverage()
+    }
+    println(view.stringify())
+    guard view is { "exit_code": Number(code, ..), .. } else {
+      fail("Missing coverage gate")
+    }
+    return code.to_int()
+  }
   if args.length() == 4 && args[1] == "--expected-sha256" {
     if args[0] == "review" {
       println(

@@ -156,6 +156,7 @@ fn render_receipt_review(
   code : Int32,
   aliases : Json,
   unresolved : Array[UnresolvedComponent],
+  coverage : Json,
 ) -> String raise InputError {
   let writer : ReviewWriter = { output: StringBuilder(), units: 0, }
   writer.write(
@@ -230,6 +231,26 @@ fn render_receipt_review(
       ".\n",
     )
   }
+  guard coverage
+    is {
+      "counts": counts,
+      "diagnostic_counts": categories,
+      "diagnostics": Array(diagnostics),
+      ..
+    } else {
+    reject("review-layout", "", "Coverage view is incomplete")
+    return ""
+  }
+  writer.write(
+    "\n## Coverage and next steps\n\nPackage counts (not a safety score): " +
+    review_inline(counts) +
+    ".\n\nDiagnostic counts: " +
+    review_inline(categories) +
+    ".\n\n",
+  )
+  for diagnostic in diagnostics {
+    writer.write("- " + review_inline(diagnostic) + "\n")
+  }
   review_aliases(writer, aliases)
   let payload = receipt.stringify()
   let fence = "`".repeat((backtick_run(payload) + 1).max(3))
@@ -254,6 +275,7 @@ pub fn Delivery::to_markdown(self : Delivery) -> String raise InputError {
     self.assessment.exit_code(),
     self.alias_review(),
     [],
+    self.assessment.coverage(),
   )
 }
 
@@ -272,5 +294,6 @@ pub fn BomDelivery::to_markdown(self : BomDelivery) -> String raise InputError {
     self.result.exit_code(),
     self.alias_review(),
     self.result.imported.unresolved,
+    self.result.coverage(),
   )
 }

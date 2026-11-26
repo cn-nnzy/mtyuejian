@@ -234,5 +234,25 @@ async fn main {
   @fs.write_file("_build/yuejian-untrusted-review.md", untrusted_markdown.stdout())
   run(target, ["review", "--expected-sha256", "invalid", path], 2) |> ignore
   run(target, ["review", path], 0) |> ignore
-  println("112 end-to-end scenarios passed on \{target}; lossless Markdown reviews, pins and recovery verified")
+  @fs.write_file(delivery_path, captured.stdout())
+  let covered = run(target, ["coverage", delivery_path], 1)
+  guard @json.parse(covered.stdout()) is {"profile": "coverage-review-v1", "counts": {"resolved_packages": 2, ..}, ..} else { fail("Coverage omitted installed packages") }
+  run(target, ["coverage", "--expected-sha256", hit_pin, delivery_path], 1) |> ignore
+  run(target, ["coverage", "--expected-sha256", fixed_pin, delivery_path], 2) |> ignore
+  @fs.write_file(delivery_path, fixed.stdout())
+  run(target, ["coverage", delivery_path], 0) |> ignore
+  @fs.write_file(delivery_path, unknown.stdout())
+  run(target, ["coverage", delivery_path], 3) |> ignore
+  @fs.write_file(path, bom_receipt.stdout())
+  let bom_coverage = run(target, ["coverage-bom", path], 3)
+  guard @json.parse(bom_coverage.stdout()) is {"counts": {"unresolved_entries": 1, ..}, "diagnostics": Array([{"category": "unsupported_identity", "next_action": String(_), ..}]), ..} else { fail("Incomplete BOM has no actionable coverage diagnostic") }
+  run(target, ["coverage-bom", "--expected-sha256", bom_pin, path], 3) |> ignore
+  run(target, ["coverage-bom", "--expected-sha256", fixed_bom_pin, path], 2) |> ignore
+  run(target, ["coverage", path], 2) |> ignore
+  run(target, ["coverage-bom", delivery_path], 2) |> ignore
+  @fs.write_file(path, "{}")
+  run(target, ["coverage-bom", path], 2) |> ignore
+  @fs.write_file(path, bom_receipt.stdout())
+  run(target, ["coverage-bom", path], 3) |> ignore
+  println("124 end-to-end scenarios passed on \{target}; actionable coverage, pins and recovery verified")
 }

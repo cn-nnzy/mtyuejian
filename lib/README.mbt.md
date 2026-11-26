@@ -21,6 +21,13 @@ test "assess an exact installed version" {
   |> ignore
   assert_eq(result.outcomes(), [@mtyuejian.Affected])
   assert_eq(result.exit_code(), 1)
+  guard result.coverage()
+    is {
+      "counts": { "resolved_packages": 1, "known_match_packages": 1, .. },
+      ..
+    } else {
+    fail("missing package-level coverage")
+  }
   let sarif = result.to_sarif(inventory_uri="inventory.json")
   guard sarif
     is {

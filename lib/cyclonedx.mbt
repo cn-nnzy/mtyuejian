@@ -3,6 +3,7 @@ priv struct UnresolvedComponent {
   path : String
   id : String?
   code : String
+  component_kind : String?
 }
 
 ///|
@@ -131,7 +132,7 @@ fn import_component(
     }
   }
   if issue is Some(code) {
-    unresolved.push({ path, id, code, })
+    unresolved.push({ path, id, code, component_kind: kind, })
   }
   for i, child in optional_list(fields, "components", path, 1024) {
     import_component(
@@ -194,7 +195,12 @@ pub fn read_cyclonedx(
     )
   }
   if count.val == 0 {
-    unresolved.push({ path: "/components", id: None, code: "no-components", })
+    unresolved.push({
+      path: "/components",
+      id: None,
+      code: "no-components",
+      component_kind: None,
+    })
   }
   packages.sort_by((a, b) => text_order(a.id, b.id))
   {

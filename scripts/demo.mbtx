@@ -59,6 +59,8 @@ async fn main {
   save(dir, "partial.bom.delivery.json", bom, artifacts)
   save(dir, "partial.bom.report.json", cli(target, ["verify-bom", dir + "/partial.bom.delivery.json"], 3), artifacts)
   save(dir, "partial.review.md", cli(target, ["review-bom", dir + "/partial.bom.delivery.json"], 0), artifacts)
+  save(dir, "before.coverage.json", cli(target, ["coverage", "--expected-sha256", baseline, dir + "/before.delivery.json"], 1), artifacts)
+  save(dir, "partial.coverage.json", cli(target, ["coverage-bom", dir + "/partial.bom.delivery.json"], 3), artifacts)
   for name in ["before-fix.json", "fixed.json", "unknown.json", "cargo-partial.cdx.json", "RUSTSEC-2020-0071.json", "SOURCES.md"] {
     save(dir, "samples/" + name, @fs.read_file("samples/" + name).text(), artifacts)
   }

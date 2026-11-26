@@ -21,6 +21,7 @@ Each run creates a fresh `_build/yuejian-demo-…` directory. It contains:
 | `changes.json` | Fix delta exits 0 against the pinned example baseline |
 | `before.sarif.json` | Finding location refers to the copied `samples/before-fix.json` |
 | `review.md` | Readable review plus the complete replayable receipt |
+| `before.coverage.json`, `partial.coverage.json` | Package-level coverage and actionable incomplete-evidence diagnostics |
 | `partial.bom.delivery.json`, `partial.bom.report.json`, `partial.review.md` | Unsupported component is retained; assessment exits 3 |
 | `manifest.json` | Final success marker, expected gates and byte SHA-256 of each artifact |
 
