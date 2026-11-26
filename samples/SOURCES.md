@@ -52,3 +52,28 @@ minimal cataloger inputs (Apache-2.0), not copied Cargo resolutions. They contai
 the real package/version names used in the RustSec boundary example; they do not
 claim to describe a buildable application or complete dependency graph. The
 Syft interoperability runner generates its own BOM outputs under `_build`.
+
+## Complete-project advisory snapshots — 2026-11-26
+
+Two unmodified RustSec OSV exports were downloaded for the historical project
+workflow. Both explicitly declare CC0-1.0 in `database_specific.license`:
+
+| File | Unchanged source | SHA-256 |
+| --- | --- | --- |
+| RUSTSEC-2021-0139.json | https://raw.githubusercontent.com/rustsec/advisory-db/osv/crates/RUSTSEC-2021-0139.json | `94403572b62224ec8016a0c8a546d3bbf67061d9783ca6032090a143906f80cb` |
+| RUSTSEC-2021-0145.json | https://raw.githubusercontent.com/rustsec/advisory-db/osv/crates/RUSTSEC-2021-0145.json | `8a03b873f4ebb59faeec5169534ee7e12a4bbddd5490867c7b74d54d7567b229` |
+
+The first record is informational: ansi_term is unmaintained. Its embedded
+modified time is 2023-09-06T22:52:31Z. A range match is not an exploitability claim.
+The second concerns an atty unaligned read with Windows/allocator conditions;
+its modified time is 2023-07-08T12:30:19Z. Only version evidence is evaluated.
+These selected records are not a complete vulnerability database, nor a claim
+about the latest security state of either upstream application.
+
+`real-projects.json` is project-authored configuration under Apache-2.0. It pins
+four full source commits, lock/manifest/license byte digests and expected results.
+Upstream exa (https://github.com/ogham/exa, Benjamin Sago) and zoxide
+(https://github.com/ajeetdsouza/zoxide, Ajeet D'Souza) are MIT. The runner retains
+their original license notices in downloaded checkouts; upstream code and locks
+are not distributed as this repository's own source. Tag-object IDs for zoxide
+are deliberately not used as commit IDs: the configuration records peeled commits.

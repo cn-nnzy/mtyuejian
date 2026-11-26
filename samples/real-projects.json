@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "projects": [
+    {
+      "name": "exa", "repository": "https://github.com/ogham/exa.git", "license": "MIT", "license_file": "LICENCE",
+      "license_sha256": "2762990c7fbba9d550802a2593c1d857dcd52596bb0f9f192a97e9a7ac5f4f9e",
+      "revisions": [
+        {"version": "0.10.0", "commit": "03cd3a81ff00b0e1dba095e5e8923ea365b5e2b0", "lock_sha256": "6ea6680a369f2b16d4a7cc394498dc414469fa5d8d50123c9e730e14f01ce38c", "manifest_sha256": "42fb68af9dfff1dadcbdc54f6375e1fe1a304408c2e2c7d543bab0ec7c687ceb", "gate": 1, "known_packages": ["ansi_term"]},
+        {"version": "0.10.1", "commit": "293372a613932a084a4b84218cc7cc374d15955e", "lock_sha256": "e976f42eff02710c1a4acf882bb9eb3a7623fb3d319dd17ac57e2818c6b4baaa", "manifest_sha256": "5dd4588f0a33963f31a5e8ad3f9d2193ea81aa11ab344299b814b276031b5e8a", "gate": 1, "known_packages": ["ansi_term"]}
+      ]
+    },
+    {
+      "name": "zoxide", "repository": "https://github.com/ajeetdsouza/zoxide.git", "license": "MIT", "license_file": "LICENSE",
+      "license_sha256": "23aa3b08366e4ed6050f3d9950070201802aadbe5675fa1c19f24f4de91cf294",
+      "revisions": [
+        {"version": "0.7.9", "commit": "bd42f0db76df53625a91284439a4cf28ff8aff49", "lock_sha256": "006bb1987e18d4f0b2b604948500addc553468091b96fe528328df6369e90437", "manifest_sha256": "c7aa7593dad52c9286bcf8edb13ddaa3589a64b8336079a4b62d59178c1812cc", "gate": 1, "known_packages": ["atty"]},
+        {"version": "0.9.0", "commit": "21520d9bbf8c97771f6496d77a916faf17eb2132", "lock_sha256": "0efc0c7f66d0792877951230aaa10248b89d6ea9a56ee9a4184e3e55410c9fad", "manifest_sha256": "db2c93d18bb3ce18d2a381f32d8cf9007946611a689c52c9bafa81a5021e11f2", "gate": 3, "known_packages": []}
+      ]
+    }
+  ]
+}

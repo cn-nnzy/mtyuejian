@@ -60,6 +60,14 @@ is checked against the SHA-256 from that release's `syft_1.57.2_checksums.txt`.
 No Syft code or binary is redistributed. Cargo lock inputs in samples/producer
 were authored here under Apache-2.0; generated BOMs remain build artifacts.
 
+The complete-project workflow fetches historical exa and zoxide sources (both
+MIT) into build artifacts only, at the exact commits and primary-file digests in
+samples/real-projects.json. Upstream license files remain in each checkout.
+No upstream implementation or lock file is vendored into this module.
+Two additional unmodified RustSec OSV records are CC0-1.0; source URLs, retrieval
+date and byte digests are recorded in samples/SOURCES.md. The ansi_term record is
+an informational maintenance advisory, not a claimed exploitable vulnerability.
+
 Markdown behavioral references are the CommonMark 0.31.2 code-span and fenced-block
 rules, https://spec.commonmark.org/0.31.2/ (specification by John MacFarlane,
 CC BY-SA 4.0). No prose or test fixtures were copied. The independent rendering

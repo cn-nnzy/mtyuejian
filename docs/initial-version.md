@@ -11,12 +11,15 @@ an end-to-end review workflow. It is a source version, not a Mooncakes release.
 | Cargo projection from CycloneDX 1.5/1.6 and SPDX 2.3 | Unsupported nodes stay visible and prevent a complete verdict |
 | Located SARIF, source alias review and lossless Markdown | No hosted viewer or exploitability claim |
 | Public consumer, complete demo kit and archive smoke check | Dependency acquisition still uses the MoonBit cache/registry |
-| Fixed-version Syft producer integration | Four documented cases; not all producer formats or applications |
+| Fixed-version Syft producer integration | Four minimal cases plus eight pinned exa/zoxide BOM cases; not all producer formats or applications |
 
 The core has 139 unit/documentation tests per supported backend. The CLI runner
 checks 124 scenarios, including malformed UTF-8/JSON, recovery after errors,
 receipt replacement/pinning, unknown BOM nodes and source location binding.
 Independent tools validate the SARIF schema and render untrusted Markdown.
+The [complete-project workflow](real-projects.md) also accounts for every lock
+package, replays eight receipts and four real release comparisons, rejects changed
+artifact digests/escaping paths, and verifies recovery with correct input.
 
 To repeat the main local checks with MoonBit stable:
 

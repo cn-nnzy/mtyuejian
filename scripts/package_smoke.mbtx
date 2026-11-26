@@ -32,7 +32,7 @@ async fn main {
   for absent in [".git", ".mooncakes", "_build", "target"] {
     assert_true(!@fs.exists(cwd + "/" + absent))
   }
-  for required in ["LICENSE", "THIRD_PARTY.md", "README.md", "samples/SOURCES.md", "scripts/demo.mbtx", "examples/consumer/moon.work"] {
+  for required in ["LICENSE", "THIRD_PARTY.md", "README.md", "samples/SOURCES.md", "scripts/demo.mbtx", "scripts/real_projects.mbtx", "samples/real-projects.json", "samples/RUSTSEC-2021-0139.json", "samples/RUSTSEC-2021-0145.json", "examples/consumer/moon.work"] {
     assert_true(@fs.exists(cwd + "/" + required))
   }
   let interface = @fs.read_file(cwd + "/lib/pkg.generated.mbti").text()

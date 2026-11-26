@@ -1,2 +1,4 @@
 * text=auto eol=lf
 samples/RUSTSEC-2020-0071.json -text
+samples/RUSTSEC-2021-0139.json -text
+samples/RUSTSEC-2021-0145.json -text

@@ -39,11 +39,14 @@ and file subjects as unresolved rather than silently discarding them.
 Coverage review counts installation IDs independently of source decisions and
 provides source-linked next steps for each incomplete-evidence category, without
 changing saved receipt formats or hiding unresolved artifacts.
+Complete-project review now checks four pinned exa/zoxide source revisions,
+accounts for every lock package across producer formats and resolved/unresolved
+assessment entries, and replays eight receipts and four upgrade comparisons.
 
 ## Possible subsequent capabilities
 
-1. Extend the fixed-version producer checks to real downstream application
-   inventories and hosted report consumers before broadening compatibility claims.
+1. Validate additional producers and hosted report consumers against the pinned
+   complete-project workflow before broadening compatibility claims.
 2. Add individual ecosystem version-ordering profiles only with reference data,
    a documented identity convention and meaningful differential tests.
    npm intake requires its ECOSYSTEM ordering semantics as well as PURL identity;

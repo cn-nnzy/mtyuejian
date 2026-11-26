@@ -41,6 +41,8 @@ moon -C examples/consumer run . --target wasm --deny-warn
 
 [生产者联调](docs/producer-interop.md)使用固定版本 Syft 生成 CycloneDX/SPDX 后直接评估和重放，保留其目录、文件等无法判定的节点；不会因为已知依赖修复就静默忽略这些节点。
 
+[完整项目验收](docs/real-projects.md)进一步检出 exa、zoxide 的四个固定源码版本，核对完整锁文件与生产者的包条目，生成八份 BOM 评估和四组升级对比，并支持脱离 Git、Syft 的离线重放。
+
 库的工作流是：
 
 1. `Package::new` 或 `read_inventory` 构造包清单。
