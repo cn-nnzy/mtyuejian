@@ -1,0 +1,53 @@
+----
+import {
+  "moonbitlang/async/fs",
+  "moonbitlang/async/shell",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/hex",
+  "moonbitlang/x/crypto",
+}
+----
+
+///|
+fn digest(bytes : Bytes) -> String {
+  @hex.encode(Bytes::from_array(@crypto.sha256(bytes)[:])[:])
+}
+
+///|
+async fn main {
+  let status = @shell.Cmd("git", ["status", "--porcelain=v1"]).output()
+  status.check()
+  guard status.stdout().is_empty() else {
+    fail("Commit and review the candidate before creating a release manifest")
+  }
+  let api = @fs.read_file("lib/pkg.generated.mbti").binary()
+  assert_eq(api, @fs.read_file("release/api-0.1.0.mbti").binary())
+  @shell.Cmd("moon", ["fmt", "--check"]).output().check()
+  @shell.Cmd("moon", ["info", "--target", "all"]).output().check()
+  @shell.Cmd("git", ["diff", "--exit-code"]).output().check()
+  @shell.Cmd("moon", ["check", "--target", "all", "--deny-warn"])
+  .output()
+  .check()
+  let archive = "_build/publish/cn-nnzy-mtyuejian-0.1.0.zip"
+  // A changed module name/version must not reuse an older generated archive.
+  @fs.remove(archive, allow_missing=true)
+  @shell.Cmd("moon", ["package", "--frozen"]).output().check()
+  let revision = @shell.Cmd("git", ["rev-parse", "HEAD"]).output()
+  revision.check()
+  let manifest : Json = {
+    "module": "cn-nnzy/mtyuejian",
+    "version": "0.1.0",
+    "source_commit": Json(revision.stdout().trim().to_owned()),
+    "archive": Json(archive),
+    "archive_sha256": Json(digest(@fs.read_file(archive).binary())),
+    "api_sha256": Json(digest(api)),
+    "publication": "not_performed",
+    "registry_consumer": "requires a published release and separate --registry verification",
+  }
+  let path = "_build/publish/release-candidate.json"
+  @fs.write_file(path, manifest)
+  println(
+    "Read-only release candidate prepared; no publication performed: " + path,
+  )
+  println(manifest.stringify())
+}

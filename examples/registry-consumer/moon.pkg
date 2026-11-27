@@ -1,0 +1,4 @@
+import {
+  "cn-nnzy/mtyuejian" @yuejian,
+}
+pkgtype(kind: "executable")

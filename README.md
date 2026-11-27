@@ -4,6 +4,8 @@
 
 目前为 **0.1.0 源码初版**，尚未发布到 Mooncakes。核心能力、命令和边界均在本仓库内实现；[初版验收](docs/initial-version.md)列出已有能力、限制和复验命令，后续计划见[路线](docs/roadmap.md)。
 
+[发布与采用约定](docs/release.md)提供冻结的公开 API、只读发布候选检查，以及分别验证源码归档和真实注册表依赖的独立消费脚本。
+
 ## 运行真实数据示例
 
 安装 [MoonBit 稳定工具链](https://www.moonbitlang.com/download/)，在仓库根目录执行：

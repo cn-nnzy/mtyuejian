@@ -1,0 +1,91 @@
+----
+import {
+  "moonbitlang/async/fs",
+  "moonbitlang/async/shell",
+  "moonbitlang/core/env",
+}
+----
+
+///|
+async fn command(args : Array[String]) -> String {
+  let result = @shell.Cmd("moon", args).output(timeout_ms=180000)
+  guard result.exit_code() == 0 else {
+    fail("Consumer check failed: \{Repr(args)}\n\{result.stderr()}")
+  }
+  result.stdout()
+}
+
+///|
+async fn main {
+  let args = @env.args()
+  guard args.length() >= 2 &&
+    ["--archive", "--registry"].contains(args[1]) &&
+    args.length() <= (if args[1] == "--archive" { 3 } else { 2 }) else {
+    fail("Usage: registry_smoke.mbtx --archive [PYTHON] | --registry")
+  }
+  let archive_mode = args[1] == "--archive"
+  if !archive_mode {
+    // Public registry metadata must exist before any consumer is constructed.
+    command(["view", "cn-nnzy/mtyuejian@0.1.0", "--json"]) |> ignore
+  }
+  let dir = "_build/yuejian-consumer-" + @env.now().to_string()
+  @fs.mkdir(dir)
+  @fs.mkdir(dir + "/consumer")
+  for file in ["moon.mod", "moon.pkg", "main.mbt"] {
+    @fs.write_file(
+      dir + "/consumer/" + file,
+      @fs.read_file("examples/registry-consumer/" + file),
+    )
+  }
+  if archive_mode {
+    @fs.remove("_build/publish/cn-nnzy-mtyuejian-0.1.0.zip", allow_missing=true)
+    command(["package", "--frozen"]) |> ignore
+    let archive = @fs.realpath("_build/publish/cn-nnzy-mtyuejian-0.1.0.zip")
+    @fs.mkdir(dir + "/source")
+    @shell.Cmd(args.get(2).unwrap_or("python"), [
+      "-m",
+      "zipfile",
+      "-e",
+      archive,
+      dir + "/source",
+    ])
+    .output(timeout_ms=60000)
+    .check()
+    @fs.write_file(
+      dir + "/consumer/moon.work",
+      "members = [\".\", \"../source\"]\n",
+    )
+  }
+  let consumer = dir + "/consumer"
+  command(["-C", consumer, "update"]) |> ignore
+  let tree = command(["-C", consumer, "tree"])
+  if !archive_mode {
+    assert_true(!@fs.exists(consumer + "/moon.work"))
+    assert_true(tree.contains("cn-nnzy/mtyuejian@0.1.0"))
+    for line in tree.split("\n") {
+      if line.contains("cn-nnzy/mtyuejian@0.1.0") {
+        assert_true(!line.contains("(local"))
+      }
+    }
+    let installed = consumer +
+      "/.mooncakes/cn-nnzy/mtyuejian/lib/pkg.generated.mbti"
+    assert_eq(
+      @fs.read_file(installed).text(),
+      @fs.read_file("release/api-0.1.0.mbti").text(),
+    )
+  }
+  @fs.write_file(dir + "/dependency-tree.txt", tree)
+  command(["-C", consumer, "check", "--target", "all", "--deny-warn"]) |> ignore
+  for target in ["wasm", "wasm-gc", "js"] {
+    command(["-C", consumer, "run", ".", "--target", target, "--deny-warn"])
+    |> ignore
+  }
+  println(
+    (if archive_mode {
+      "Archive consumer passed (local workspace; not a registry publication claim): "
+    } else {
+      "Published registry consumer passed with no workspace override: "
+    }) +
+    dir,
+  )
+}

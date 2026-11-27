@@ -1,0 +1,133 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "cn-nnzy/mtyuejian"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn assess(Snapshot, ArrayView[Package]) -> Assessment raise InputError
+
+pub fn capture(Snapshot, ArrayView[Package]) -> Delivery raise InputError
+
+pub fn capture_bom(Snapshot, BomImport) -> BomDelivery raise InputError
+
+pub fn compare_bom_deliveries(BomDelivery, BomDelivery) -> BomChanges
+
+pub fn compare_deliveries(Delivery, Delivery) -> Changes
+
+pub fn inventory_json(ArrayView[Package]) -> @json.Json raise InputError
+
+pub fn read_advisory(String, origin? : String) -> Advisory raise InputError
+
+pub fn read_bom(String, origin? : String) -> BomImport raise InputError
+
+pub fn read_cyclonedx(String, origin? : String) -> BomImport raise InputError
+
+pub fn read_inventory(String) -> Array[Package] raise InputError
+
+pub fn read_snapshot(String) -> Snapshot raise InputError
+
+pub fn read_spdx(String, origin? : String) -> BomImport raise InputError
+
+pub fn verify_bom_delivery(String, expected_sha256? : String) -> BomDelivery raise InputError
+
+pub fn verify_delivery(String, expected_sha256? : String) -> Delivery raise InputError
+
+// Errors
+pub(all) suberror InputError {
+  Invalid(code~ : String, path~ : String, message~ : String)
+}
+pub fn InputError::to_json(Self) -> @json.Json
+
+// Types and methods
+pub struct Advisory {
+  // private fields
+}
+pub fn Advisory::id(Self) -> String
+pub fn Advisory::source(Self) -> String
+
+pub struct Assessment {
+  // private fields
+}
+pub fn Assessment::coverage(Self) -> @json.Json
+pub fn Assessment::exit_code(Self) -> Int32
+pub fn Assessment::outcomes(Self) -> Array[Outcome]
+pub fn Assessment::to_json(Self) -> @json.Json
+pub fn Assessment::to_sarif(Self, inventory_uri~ : String, inventory_source? : String) -> @json.Json raise InputError
+
+pub struct BomAssessment {
+  // private fields
+}
+pub fn BomAssessment::coverage(Self) -> @json.Json
+pub fn BomAssessment::exit_code(Self) -> Int32
+pub fn BomAssessment::to_json(Self) -> @json.Json
+pub fn BomAssessment::to_sarif(Self, bom_uri~ : String, locate? : Bool) -> @json.Json raise InputError
+
+pub struct BomChanges {
+  // private fields
+}
+pub fn BomChanges::exit_code(Self) -> Int32
+pub fn BomChanges::to_json(Self) -> @json.Json
+
+pub struct BomDelivery {
+  // private fields
+}
+pub fn BomDelivery::alias_review(Self) -> @json.Json
+pub fn BomDelivery::assessment(Self) -> BomAssessment
+pub fn BomDelivery::digest(Self) -> String
+pub fn BomDelivery::to_json(Self) -> @json.Json
+pub fn BomDelivery::to_markdown(Self) -> String raise InputError
+
+pub struct BomImport {
+  // private fields
+}
+pub fn BomImport::assess(Self, Snapshot) -> BomAssessment raise InputError
+pub fn BomImport::inventory_json(Self) -> @json.Json raise InputError
+pub fn BomImport::source(Self) -> String
+pub fn BomImport::to_json(Self) -> @json.Json
+
+pub struct Changes {
+  // private fields
+}
+pub fn Changes::exit_code(Self) -> Int32
+pub fn Changes::to_json(Self) -> @json.Json
+
+pub struct Delivery {
+  // private fields
+}
+pub fn Delivery::alias_review(Self) -> @json.Json
+pub fn Delivery::assessment(Self) -> Assessment
+pub fn Delivery::digest(Self) -> String
+pub fn Delivery::to_json(Self) -> @json.Json
+pub fn Delivery::to_markdown(Self) -> String raise InputError
+
+#derive(Eq, @debug.Debug)
+pub(all) enum Outcome {
+  Affected
+  NotMatched
+  Undetermined
+  Withdrawn
+  NoAdvisory
+}
+pub fn Outcome::equal(Self, Self) -> Bool
+pub fn Outcome::not_equal(Self, Self) -> Bool
+pub fn Outcome::to_repr(Self) -> @debug.Repr
+
+pub struct Package {
+  // private fields
+}
+pub fn Package::new(id~ : String, ecosystem~ : String, name~ : String, version~ : String) -> Self raise InputError
+pub fn Package::to_json(Self) -> @json.Json
+
+pub struct Snapshot {
+  // private fields
+}
+pub fn Snapshot::new(ArrayView[Advisory]) -> Self raise InputError
+pub fn Snapshot::to_json(Self) -> @json.Json
+pub fn Snapshot::with_crates_io(Self) -> Self raise InputError
+
+// Type aliases
+
+// Traits

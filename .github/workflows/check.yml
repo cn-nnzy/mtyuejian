@@ -3,6 +3,11 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      verify_registry:
+        description: Verify the published 0.1.0 registry package without workspace overrides
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -37,7 +42,7 @@ jobs:
       - name: Format
         run: moon fmt --check
       - name: Workflow scripts format
-        run: moon fmt --check scripts/demo.mbtx scripts/e2e.mbtx scripts/package_smoke.mbtx scripts/syft_interop.mbtx scripts/real_projects.mbtx scripts/crates_oracle.mbtx
+        run: moon fmt --check scripts/demo.mbtx scripts/e2e.mbtx scripts/package_smoke.mbtx scripts/syft_interop.mbtx scripts/real_projects.mbtx scripts/crates_oracle.mbtx scripts/registry_smoke.mbtx scripts/release_check.mbtx
       - name: Interfaces
         run: moon info --target all
       - name: Interface drift
@@ -63,6 +68,13 @@ jobs:
           python-version: '3.12'
       - name: Source archive adoption
         run: moon run scripts/package_smoke.mbtx
+      - name: Standalone consumer from release archive
+        run: moon run scripts/registry_smoke.mbtx --archive
+      - name: Read-only release candidate
+        run: moon run scripts/release_check.mbtx
+      - name: Published registry adoption
+        if: github.event_name == 'workflow_dispatch' && inputs.verify_registry
+        run: moon run scripts/registry_smoke.mbtx --registry
       - name: Independent SBOM producer
         if: runner.os == 'Linux'
         run: moon run scripts/syft_interop.mbtx --fetch-linux
