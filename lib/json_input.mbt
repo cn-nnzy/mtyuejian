@@ -257,14 +257,7 @@ fn Reader::value(
 }
 
 ///|
-fn read_value(
-  text : String,
-  max_units~ : Int32 = 1048576,
-  spans? : Map[String, (Int32, Int32)],
-) -> Value raise InputError {
-  if text.length() > max_units {
-    reject("document-limit", "", "Document exceeds its UTF-16 code unit budget")
-  }
+fn require_unicode(text : String, path : String) -> Unit raise InputError {
   // Library callers can construct Strings independently of a strict UTF-8 host.
   let units = text.code_units()
   let mut i = 0
@@ -274,19 +267,31 @@ fn read_value(
       if i + 1 >= units.length() ||
         units[i + 1] < 0xDC00 ||
         units[i + 1] > 0xDFFF {
-        reject("invalid-unicode", "", "Unpaired UTF-16 surrogate")
+        reject("invalid-unicode", path, "Unpaired UTF-16 surrogate")
       }
       i += 2
     } else {
       if c >= 0xDC00 && c <= 0xDFFF {
-        reject("invalid-unicode", "", "Unpaired UTF-16 surrogate")
+        reject("invalid-unicode", path, "Unpaired UTF-16 surrogate")
       }
       i += 1
     }
   }
+}
+
+///|
+fn read_value(
+  text : String,
+  max_units~ : Int32 = 1048576,
+  spans? : Map[String, (Int32, Int32)],
+) -> Value raise InputError {
+  if text.length() > max_units {
+    reject("document-limit", "", "Document exceeds its UTF-16 code unit budget")
+  }
+  require_unicode(text, "")
   let reader = Reader::{
     text,
-    units,
+    units: text.code_units(),
     pos: 0,
     nodes: 0,
     spans,
@@ -351,6 +356,7 @@ fn nonempty(value : String, path : String) -> String raise InputError {
       "invalid-text", path, "Expected nonblank text of at most 4096 UTF-16 code units",
     )
   }
+  require_unicode(value, path)
   value
 }
 

@@ -83,7 +83,8 @@ pub fn read_inventory(input : String) -> Array[Package] raise InputError {
 }
 
 ///|
-/// Deterministic inventory-v1 serialization; rejects duplicate IDs from API callers.
+/// Deterministic inventory-v1 serialization; rejects duplicate IDs and encoded
+/// documents exceeding the paired reader's 1048576 UTF-16 unit budget.
 pub fn inventory_json(packages : ArrayView[Package]) -> Json raise InputError {
   if packages.is_empty() || packages.length() > 1024 {
     reject("inventory-limit", "/packages", "Expected 1 to 1024 packages")
@@ -95,5 +96,14 @@ pub fn inventory_json(packages : ArrayView[Package]) -> Json raise InputError {
       reject("duplicate-package-id", "/packages", "Package IDs must be unique")
     }
   }
-  { "schema_version": 1, "packages": Json(sorted.map(p => p.to_json())) }
+  let view : Json = {
+    "schema_version": 1,
+    "packages": Json(sorted.map(p => p.to_json())),
+  }
+  if view.stringify().length() > 1048576 {
+    reject(
+      "document-limit", "/packages", "Encoded inventory exceeds 1048576 UTF-16 code units; split the inventory into bounded assessments",
+    )
+  }
+  view
 }

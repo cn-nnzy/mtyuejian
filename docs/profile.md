@@ -123,3 +123,14 @@ The CLI requires strict UTF-8 JSON without a BOM and reads bounded chunks. No
 input file is rewritten. All input failures return structured diagnostics and
 exit 2 before a partial assessment is printed. Successful library objects are
 immutable; returned JSON and outcome arrays do not mutate their backing state.
+
+Direct library calls enforce the same Unicode boundary: package fields and
+origin labels reject unpaired UTF-16 surrogates with `invalid-unicode` at the
+field pointer, before JSON or UTF-8 encoding can replace data. Valid non-BMP
+characters are retained without normalization. `inventory_json` also checks the
+complete encoded document, including JSON escaping, against the reader's
+1,048,576-unit limit. Individually valid fields can exceed that aggregate budget;
+such inventories raise `document-limit` rather than producing an unreadable
+export. The same check applies before assessment. Split large inputs into
+bounded assessments and review every partition; a result covers only its own
+supplied inventory and snapshot.

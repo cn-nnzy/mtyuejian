@@ -47,6 +47,10 @@ receipts, with conservative profile-change deltas and a pinned independent oracl
 
 ## Possible subsequent capabilities
 
+First satisfy the [maturity gates](maturity.md): fix reproducible defects,
+validate downstream workflows and measure capacity before broadening scope.
+Mooncakes publication remains deferred.
+
 1. Validate additional producers and hosted report consumers against the pinned
    complete-project workflow before broadening compatibility claims.
 2. Extend ecosystem ordering only with reference data and differential tests.
