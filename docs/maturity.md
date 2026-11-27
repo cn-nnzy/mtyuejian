@@ -23,6 +23,11 @@ documents source pins, coverage accounting and offline replay. The
 
 ## Remaining evidence to gather before publication
 
+The [second-producer workflow](trivy-interop.md) now checks Trivy 0.76.2 against
+the same four pinned sources, preserves unnamed package nodes and records
+producer scope differences. This closes one concrete compatibility gap; it
+does not replace broader producer/downstream validation or capacity measurement.
+
 1. Try additional producer versions and independently maintained downstream
    projects. Record the original input, expected behavior and producer version;
    turn every confirmed defect into a regression fixture with provenance.

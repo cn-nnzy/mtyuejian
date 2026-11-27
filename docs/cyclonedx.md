@@ -2,7 +2,7 @@
 
 `read_cyclonedx` connects existing SBOM producers to the OSV evaluator. It does
 not scan source trees or generate a BOM. The accepted header is CycloneDX JSON
-1.5 or 1.6. This is a bounded inventory projection, not full schema validation.
+1.5, 1.6 or 1.7. This is a bounded inventory projection, not full schema validation.
 
 ```sh
 moon run lib/cli -- check-cdx samples/cargo.cdx.json samples/RUSTSEC-2020-0071.json
@@ -32,6 +32,11 @@ and diagnostic code. Incorrect JSON types, duplicate references and exceeded
 budgets reject the input with `InputError`. A corrected input can be read with
 the same API; there is no retained parser state.
 
+An empty component `name` is retained as missing identity and stays unresolved,
+including when a producer supplies its own package ID in metadata. The adapter
+does not infer names from that metadata or a PURL. Invalid JSON types still
+reject the input. This also applies to SPDX package names.
+
 The adapter accounts for `metadata.component`, top-level `components` and their
 nested `components`, including unresolved parents. A missing or empty component
 set is incomplete. Maximums are 1,024 total components, 16 component nesting
@@ -56,3 +61,11 @@ the producer supplied a complete application inventory.
 The profile deliberately leaves general Package URL parsing to other tools.
 Supporting another ecosystem requires explicit identity and ordering semantics,
 not merely changing an ecosystem string.
+
+The 1.7 adapter uses the same restricted component identity fields and traversal
+as earlier versions; unsupported component types remain unresolved. Additional
+1.7 metadata is preserved in the exact source, without evaluating its meaning.
+It does not implement the entire 1.7 specification or embedded assertions.
+The [official 1.7 reference](https://cyclonedx.org/docs/1.7/json/) and
+[cross-producer workflow](trivy-interop.md) document the format and actual input
+cases. Previous 1.5/1.6 receipt bytes and public API signatures are unchanged.

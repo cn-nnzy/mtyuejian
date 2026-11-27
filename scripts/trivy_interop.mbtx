@@ -1,0 +1,616 @@
+----
+import {
+  "moonbitlang/async@0.22.10/fs",
+  "moonbitlang/async@0.22.10/shell",
+  "moonbitlang/core/encoding/hex",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.7/crypto",
+}
+----
+
+///|
+fn digest(bytes : Bytes) -> String {
+  @hex.encode(Bytes::from_array(@crypto.sha256(bytes)[:])[:])
+}
+
+///|
+fn field(value : Json, key : String) -> String raise {
+  guard value is Object(fields) && fields.get(key) is Some(String(text)) else {
+    fail("Missing text field: " + key)
+  }
+  text
+}
+
+///|
+async fn invoke(
+  program : String,
+  args : Array[String],
+  expected~ : Int32 = 0,
+  timeout_ms~ : Int32 = 180000,
+) -> String {
+  let result = @shell.Cmd(program, args).output(
+    timeout_ms~,
+    max_output_bytes=16777216,
+  )
+  guard result.exit_code() == expected else {
+    fail(
+      "Producer review step \{program} \{Repr(args)}: expected \{expected}, got \{result.exit_code()}: \{result.stderr()}",
+    )
+  }
+  result.stdout()
+}
+
+///|
+async fn cli(target : String, args : Array[String], gate : Int32) -> String {
+  invoke(
+    "moon",
+    ["run", "--target", target, "--deny-warn", "lib/cli", "--"] + args,
+    expected=gate,
+  )
+}
+
+///|
+async fn confined(dir : String, path : String) -> String {
+  guard !path.is_empty() &&
+    !path.contains("\\") &&
+    !path.contains(":") &&
+    path.split("/").all(p => !p.is_empty() && p != "." && p != "..") else {
+    fail("Expected a confined relative artifact path")
+  }
+  let root = @fs.realpath(dir)
+  let resolved = @fs.realpath(dir + "/" + path)
+  guard resolved.has_prefix(root + "/") || resolved.has_prefix(root + "\\") else {
+    fail("Artifact escapes its review directory")
+  }
+  guard @fs.file_size(resolved) <= 16777216L else {
+    fail("Artifact exceeds 16 MiB")
+  }
+  resolved
+}
+
+///|
+async fn save(
+  dir : String,
+  path : String,
+  text : String,
+  artifacts : Array[Json],
+) -> Unit {
+  @fs.write_file(dir + "/" + path, text)
+  artifacts.push({
+    "path": Json(path),
+    "sha256": Json(digest(@fs.read_file(dir + "/" + path).binary())),
+  })
+}
+
+///|
+async fn fetch_linux(dir : String) -> String {
+  assert_eq(invoke("uname", ["-sm"]).trim().to_owned(), "Linux x86_64")
+  let path = dir + "/trivy.tar.gz"
+  invoke("curl", [
+    "--fail", "--location", "--silent", "--show-error", "--max-time", "120", "--output",
+    path, "https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_Linux-64bit.tar.gz",
+  ])
+  |> ignore
+  assert_eq(
+    digest(@fs.read_file(path).binary()),
+    "bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf",
+  )
+  invoke("tar", ["-xzf", path, "-C", dir, "trivy", "LICENSE"]) |> ignore
+  @fs.realpath(dir + "/trivy")
+}
+
+///|
+fn identity(row : Json, name : String, version : String) -> String raise {
+  Json([Json(field(row, name)), Json(field(row, version))]).stringify()
+}
+
+///|
+// Multisets, not sets: duplicate installed name/version pairs remain countable.
+fn difference(before : Array[String], after : Array[String]) -> Array[String] {
+  let remaining = after[:].to_owned()
+  let missing = []
+  for item in before {
+    match remaining.search(item) {
+      Some(i) => remaining.remove(i) |> ignore
+      None => missing.push(item)
+    }
+  }
+  missing.sort()
+  missing
+}
+
+///|
+fn components(row : Json, found : Array[Json]) -> Unit raise {
+  found.push(row)
+  if row is { "components": Array(children), .. } {
+    for child in children {
+      components(child, found)
+    }
+  }
+}
+
+///|
+async fn verify(dir : String, manifest : Json, target : String) -> Unit {
+  guard manifest
+    is {
+      "schema_version": 1,
+      "profile": "trivy-review-v1",
+      "artifacts": Array(artifacts),
+      "cases": Array(cases),
+      "changes": Array(changes),
+      ..
+    } &&
+    cases.length() == 8 &&
+    changes.length() == 4 else {
+    fail("Incomplete producer review manifest")
+  }
+  let hashes : Map[String, String] = Map([])
+  for artifact in artifacts {
+    let path = field(artifact, "path")
+    guard !hashes.contains(path) else { fail("Duplicate artifact path") }
+    let hash = field(artifact, "sha256")
+    assert_eq(digest(@fs.read_file(confined(dir, path)).binary()), hash)
+    hashes[path] = hash
+  }
+  for entry in cases {
+    guard entry is { "gate": Number(code, ..), .. } &&
+      (code == 1.0 || code == 3.0) else {
+      fail("Unexpected review gate")
+    }
+    for key in ["receipt", "report", "coverage"] {
+      guard hashes.contains(field(entry, key)) else {
+        fail("Case artifact is not covered by the manifest")
+      }
+    }
+    let receipt = confined(dir, field(entry, "receipt"))
+    let pin = field(entry, "receipt_sha256")
+    assert_eq(
+      cli(
+        target,
+        ["verify-bom", "--expected-sha256", pin, receipt],
+        code.to_int(),
+      ),
+      @fs.read_file(confined(dir, field(entry, "report"))).text(),
+    )
+    assert_eq(
+      cli(
+        target,
+        ["coverage-bom", "--expected-sha256", pin, receipt],
+        code.to_int(),
+      ),
+      @fs.read_file(confined(dir, field(entry, "coverage"))).text(),
+    )
+  }
+  for entry in changes {
+    for key in ["before", "after", "report"] {
+      guard hashes.contains(field(entry, key)) else {
+        fail("Comparison artifact is not covered by the manifest")
+      }
+    }
+    assert_eq(
+      cli(
+        target,
+        [
+          "changes-bom",
+          "--baseline-sha256",
+          field(entry, "baseline_sha256"),
+          confined(dir, field(entry, "before")),
+          confined(dir, field(entry, "after")),
+        ],
+        3,
+      ),
+      @fs.read_file(confined(dir, field(entry, "report"))).text(),
+    )
+  }
+}
+
+///|
+async fn main {
+  let args = @env.args()
+  guard args.length() == 3 || args.length() == 4 else {
+    fail(
+      "Usage: trivy_interop.mbtx TRIVY_EXECUTABLE|--fetch-linux SYFT_REVIEW_DIRECTORY|--fresh-syft [wasm|native]; or --replay REVIEW_DIRECTORY [wasm|native]",
+    )
+  }
+  let target = args.get(3).unwrap_or("wasm")
+  guard ["wasm", "native"].contains(target) else {
+    fail("Unsupported CLI target")
+  }
+  if args[1] == "--replay" {
+    verify(
+      args[2],
+      @json.parse(
+        @fs.read_file(confined(args[2], "manifest.json")).text(),
+        reject_duplicate_keys=true,
+      ),
+      target,
+    )
+    println("Trivy review replayed: eight receipts and four comparisons")
+    return
+  }
+  let input = if args[2] == "--fresh-syft" {
+    let output = invoke(
+      "moon",
+      ["run", "scripts/real_projects.mbtx", "--fetch-linux", target],
+      timeout_ms=600000,
+    )
+    println(output)
+    let paths = output
+      .split("\n")
+      .filter(line => line.has_prefix("Complete real-project review: "))
+      .collect()
+    guard paths is [path] else { fail("Missing fresh Syft review path") }
+    path[30:].trim().to_owned()
+  } else {
+    args[2]
+  }
+  invoke("moon", [
+    "run", "scripts/real_projects.mbtx", "--replay", input, target,
+  ])
+  |> ignore
+  let configuration = @fs.read_file("samples/real-projects.json").json()
+  assert_eq(
+    @fs.read_file(confined(input, "project-sources.json")).json(),
+    configuration,
+  )
+  guard configuration is { "projects": Array(projects), .. } else {
+    fail("Missing pinned projects")
+  }
+  let dir = "_build/yuejian-trivy-" + @env.now().to_string()
+  @fs.mkdir(dir)
+  let trivy = if args[1] == "--fetch-linux" {
+    fetch_linux(dir)
+  } else {
+    args[1]
+  }
+  let producer = @json.parse(invoke(trivy, ["--version", "--format", "json"]))
+  guard producer is { "Version": "0.76.2", .. } else {
+    fail("Trivy 0.76.2 is required")
+  }
+  let artifacts : Array[Json] = []
+  let cases : Array[Json] = []
+  let changes : Array[Json] = []
+  save(dir, "producer.json", producer.stringify(), artifacts)
+  save(dir, "trivy.yaml", "{}\n", artifacts)
+  save(dir, "project-sources.json", configuration.stringify(), artifacts)
+  let advisories = [
+    "samples/RUSTSEC-2021-0145.json", "samples/RUSTSEC-2021-0139.json",
+  ]
+  for project in projects {
+    let name = field(project, "name")
+    guard project is { "revisions": Array(revisions), .. } else {
+      fail("Missing revisions")
+    }
+    let baselines : Map[String, (String, String)] = Map([])
+    for revision in revisions {
+      let stem = name + "-" + field(revision, "version")
+      let relative = "sources/" + stem + "/"
+      for
+        (file, expected) in [
+          ("Cargo.lock", field(revision, "lock_sha256")),
+          ("Cargo.toml", field(revision, "manifest_sha256")),
+          (field(project, "license_file"), field(project, "license_sha256")),
+        ] {
+        let bytes = @fs.read_file(confined(input, relative + file)).binary()
+        assert_eq(digest(bytes), expected)
+        if file == field(project, "license_file") {
+          save(
+            dir,
+            stem + ".LICENSE",
+            @fs.read_file(confined(input, relative + file)).text(),
+            artifacts,
+          )
+        }
+      }
+      guard revision
+        is {
+          "gate": Number(gate, ..),
+          "known_packages": Array(expected_names),
+          ..
+        } else {
+        fail("Missing expected results")
+      }
+      let source = input + "/sources/" + stem
+      let command = [
+        "filesystem",
+        "--config",
+        dir + "/trivy.yaml",
+        "--cache-dir",
+        dir + "/cache",
+        "--offline-scan",
+        "--disable-telemetry",
+        "--skip-version-check",
+        "--skip-db-update",
+        "--skip-java-db-update",
+        "--skip-check-update",
+        "--scanners",
+        "",
+        "--skip-dirs",
+        "**/.git",
+      ]
+      let native = stem + ".trivy.json"
+      invoke(
+        trivy,
+        command + ["--format", "json", "--output", dir + "/" + native, source],
+      )
+      |> ignore
+      let catalog_text = @fs.read_file(dir + "/" + native).text()
+      save(dir, native, catalog_text, artifacts)
+      guard @json.parse(catalog_text) is { "Results": Array(results), .. } else {
+        fail("Missing Trivy package catalog")
+      }
+      let identities = []
+      let unidentified = []
+      for row in results {
+        if row is { "Packages": Array(packages), .. } {
+          for item in packages {
+            if item is { "Name": String(name), "Version": String(version), .. } &&
+              !name.is_empty() &&
+              !version.is_empty() {
+              identities.push(identity(item, "Name", "Version"))
+            } else {
+              unidentified.push(item)
+            }
+          }
+        }
+      }
+      guard !identities.is_empty() else {
+        fail("Producer returned no packages")
+      }
+      identities.sort()
+      let syft_text = @fs.read_file(confined(input, stem + ".syft.json")).text()
+      save(dir, stem + ".syft.json", syft_text, artifacts)
+      guard @json.parse(syft_text) is { "artifacts": Array(lock_rows), .. } else {
+        fail("Missing complete lock catalog")
+      }
+      let lock_ids = lock_rows.map(row => identity(row, "name", "version"))
+      guard difference(identities, lock_ids).is_empty() else {
+        fail("Trivy reported identities outside the pinned lock catalog")
+      }
+      let omitted = difference(lock_ids, identities)
+      let catalog_count = identities.length() + unidentified.length()
+      let expected_counts : Map[String, Int32] = {
+        "exa-0.10.0": 43,
+        "exa-0.10.1": 45,
+        "zoxide-0.7.9": 83,
+        "zoxide-0.9.0": 106,
+      }
+      assert_eq(catalog_count, expected_counts[stem])
+      assert_eq(unidentified.length(), if stem == "exa-0.10.1" { 1 } else { 0 })
+      assert_eq(
+        omitted.length(),
+        if stem == "exa-0.10.1" {
+          1
+        } else if stem == "zoxide-0.7.9" {
+          15
+        } else {
+          0
+        },
+      )
+      let not_identified = omitted.map(text => @json.parse(text))
+      save(
+        dir,
+        stem + ".scope.json",
+        Json::object({
+          "scope": "Trivy filesystem package catalog; may exclude lock entries; no runtime completeness claim",
+          "lock_packages": Json(lock_ids.length()),
+          "catalog_packages": Json(catalog_count),
+          "identified_packages": Json(identities.length()),
+          "unidentified_catalog_entries": Json(unidentified),
+          "lock_identities_not_identified": Json(not_identified),
+        }).stringify(),
+        artifacts,
+      )
+      for format in ["cdx", "spdx"] {
+        let file = stem + "." + format + ".json"
+        invoke(
+          trivy,
+          command +
+          [
+            "--format",
+            if format == "cdx" {
+              "cyclonedx"
+            } else {
+              "spdx-json"
+            },
+            "--output",
+            dir + "/" + file,
+            source,
+          ],
+        )
+        |> ignore
+        let bom = @fs.read_file(dir + "/" + file).text()
+        for entry in unidentified {
+          assert_true(bom.contains(field(entry, "ID")))
+        }
+        save(dir, file, bom, artifacts)
+        let bom_rows = []
+        if format == "cdx" {
+          let value = @json.parse(bom)
+          if value is { "metadata": { "component": root, .. }, .. } {
+            components(root, bom_rows)
+          }
+          if value is { "components": Array(rows), .. } {
+            for row in rows {
+              components(row, bom_rows)
+            }
+          }
+        } else {
+          guard @json.parse(bom) is { "packages": Array(rows), .. } else {
+            fail("Missing SPDX packages")
+          }
+          bom_rows.append(rows)
+        }
+        let row_ids = []
+        for row in bom_rows {
+          let key = if format == "cdx" { "version" } else { "versionInfo" }
+          if row is Object(fields) && fields.get(key) is Some(String(_)) {
+            row_ids.push(identity(row, "name", key))
+          }
+        }
+        guard difference(identities, row_ids).is_empty() else {
+          fail("Producer BOM lost catalog package identities")
+        }
+        let receipt_file = file + ".delivery.json"
+        let receipt = cli(
+          target,
+          ["capture-bom", dir + "/" + file] + advisories,
+          0,
+        )
+        guard @json.parse(receipt)
+          is { "bom": String(retained), "sha256": String(pin), .. } &&
+          retained == bom else {
+          fail("Producer source was changed")
+        }
+        save(dir, receipt_file, receipt, artifacts)
+        let report_file = file + ".report.json"
+        let report = cli(
+          target,
+          ["verify-bom", "--expected-sha256", pin, dir + "/" + receipt_file],
+          gate.to_int(),
+        )
+        save(dir, report_file, report, artifacts)
+        guard @json.parse(report)
+          is {
+            "import": {
+              "packages": Array(packages),
+              "unresolved": Array(unresolved),
+              ..
+            },
+            "assessment": { "decisions": Array(decisions), .. },
+            ..
+          } else {
+          fail("Missing BOM assessment")
+        }
+        assert_eq(packages.length() + unresolved.length(), bom_rows.length())
+        assert_eq(bom_rows.length(), catalog_count + 2)
+        let matched = decisions
+          .filter(row => row is { "outcome": "affected", .. })
+          .map(row => {
+            guard row is { "package": item, .. } else {
+              fail("Missing decision identity")
+            }
+            Json(field(item, "name"))
+          })
+        assert_eq(matched, expected_names)
+        let coverage_file = file + ".coverage.json"
+        save(
+          dir,
+          coverage_file,
+          cli(
+            target,
+            ["coverage-bom", "--expected-sha256", pin, dir + "/" + receipt_file],
+            gate.to_int(),
+          ),
+          artifacts,
+        )
+        save(
+          dir,
+          file + ".sarif.json",
+          cli(
+            target,
+            ["sarif-bom-located", dir + "/" + file, file] + advisories,
+            gate.to_int(),
+          ),
+          artifacts,
+        )
+        save(
+          dir,
+          file + ".review.md",
+          cli(target, ["review-bom", dir + "/" + receipt_file], 0),
+          artifacts,
+        )
+        cases.push({
+          "project": Json(stem),
+          "format": Json(format),
+          "gate": Json(gate.to_int()),
+          "source_commit": Json(field(revision, "commit")),
+          "catalog_packages": Json(catalog_count),
+          "identified_packages": Json(identities.length()),
+          "resolved_packages": Json(packages.length()),
+          "unresolved": Json(unresolved.length()),
+          "lock_identities_not_identified": Json(not_identified),
+          "receipt": Json(receipt_file),
+          "receipt_sha256": Json(pin),
+          "report": Json(report_file),
+          "coverage": Json(coverage_file),
+        })
+        if baselines.get(format) is Some((before, baseline_pin)) {
+          let change_file = name + "." + format + ".changes.json"
+          save(
+            dir,
+            change_file,
+            cli(
+              target,
+              [
+                "changes-bom",
+                "--baseline-sha256",
+                baseline_pin,
+                dir + "/" + before,
+                dir + "/" + receipt_file,
+              ],
+              3,
+            ),
+            artifacts,
+          )
+          changes.push({
+            "before": Json(before),
+            "after": Json(receipt_file),
+            "baseline_sha256": Json(baseline_pin),
+            "report": Json(change_file),
+          })
+        } else {
+          baselines[format] = (receipt_file, pin)
+        }
+        println(
+          "\{stem} \{format}: catalog=\{catalog_count}, identified=\{identities.length()}, gaps=\{omitted.length()}, resolved=\{packages.length()}, unresolved=\{unresolved.length()}, gate=\{gate.to_int()}",
+        )
+      }
+    }
+  }
+  @fs.mkdir(dir + "/samples")
+  for path in ["LICENSE", "THIRD_PARTY.md", "samples/SOURCES.md"] + advisories {
+    save(dir, path, @fs.read_file(path).text(), artifacts)
+  }
+  save(
+    dir, "README.md", "# Trivy producer review\n\nEight unmodified CycloneDX 1.7/SPDX 2.3 BOMs from four pinned historical source revisions. Scope files list lock identities the producer did not identify, including an unnamed root and filtered dependencies. All generated component nodes remain in assessment receipts; no runtime inventory or exploitability claim is made.\n\nReplay from a Yuejian checkout with dependencies installed:\n\n    moon run scripts/trivy_interop.mbtx --replay REVIEW_DIRECTORY\n\nReplay needs neither source checkouts, Syft nor Trivy. Retain independent trusted receipt pins for approval; the manifest is unsigned integrity evidence. Upstream MIT license notices and advisory attribution are included.\n",
+    artifacts,
+  )
+  let manifest : Json = {
+    "schema_version": 1,
+    "profile": "trivy-review-v1",
+    "scope": "all nodes in unmodified Trivy BOMs; producer omissions are separately listed; not a complete lock/runtime inventory",
+    "producer": producer,
+    "cases": Json(cases),
+    "changes": Json(changes),
+    "artifacts": Json(artifacts),
+  }
+  verify(dir, manifest, target)
+  for mode in ["digest", "path", "pin"] {
+    let invalid = @json.parse(manifest.stringify())
+    guard invalid
+      is {
+        "artifacts": Array([Object(first), ..]),
+        "cases": Array([Object(entry), ..]),
+        ..
+      } else {
+      fail("Missing rejection test input")
+    }
+    if mode == "digest" {
+      first["sha256"] = Json("0".repeat(64))
+    } else if mode == "path" {
+      first["path"] = Json("../outside-review")
+    } else {
+      entry["receipt_sha256"] = Json("0".repeat(64))
+    }
+    try verify(dir, invalid, target) catch {
+      _ => ()
+    } noraise {
+      _ => fail("Invalid producer review accepted: " + mode)
+    }
+  }
+  verify(dir, manifest, target)
+  @fs.write_file(dir + "/manifest.json", manifest)
+  println("Trivy cross-producer review: " + dir)
+}

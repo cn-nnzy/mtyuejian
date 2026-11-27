@@ -44,6 +44,9 @@ accounts for every lock package across producer formats and resolved/unresolved
 assessment entries, and replays eight receipts and four upgrade comparisons.
 The opt-in crates.io ECOSYSTEM profile is bound into schema-2 snapshots and
 receipts, with conservative profile-change deltas and a pinned independent oracle.
+CycloneDX 1.7 input and empty-name BOM nodes are supported through the same
+restricted Cargo projection. Trivy 0.76.2 adds eight unmodified public-project
+BOM workflows, four comparisons and explicit accounting of producer scope gaps.
 
 ## Possible subsequent capabilities
 

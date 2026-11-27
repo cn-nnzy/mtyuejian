@@ -32,7 +32,7 @@ fn cargo_snapshot() -> @mtyuejian.Snapshot raise {
 
 ///|
 test "CycloneDX inventory adapter evaluates exact Cargo package identity" {
-  for spec in ["1.5", "1.6"] {
+  for spec in ["1.5", "1.6", "1.7"] {
     let imported = @mtyuejian.read_cyclonedx(
       bom(component("a", "1.0.0"), version=spec),
     )
@@ -214,7 +214,7 @@ test "source round trip preserves metadata and derived import view" {
 test "malformed and unsupported BOM profiles are rejected" {
   for
     raw in [
-      bom(component("a", "1.0.0"), version="1.7"),
+      bom(component("a", "1.0.0"), version="1.8"),
       bom(component("a", "1.0.0")).replace(old="CycloneDX", new="SPDX"),
       bom(component("a", "1.0.0")).replace(
         old="\"components\":",
@@ -227,4 +227,79 @@ test "malformed and unsupported BOM profiles are rejected" {
       _ => fail("invalid BOM accepted")
     }
   }
+}
+
+///|
+test "CycloneDX 1.7 receipts retain unsupported nodes and opaque metadata" {
+  let raw = bom(
+    component("a", "2.0.0") +
+    "," +
+    component("crypto", "1.0.0").replace(
+      old="library",
+      new="cryptographic-asset",
+    ),
+    version="1.7",
+  ).replace(
+    old="\"components\":",
+    new="\"extension\":{\"integer\":900719925474099312345,\"flag\":false},\"components\":",
+  )
+  let imported = @mtyuejian.read_bom(raw, origin="trivy-format-case")
+  assert_eq(imported.source(), raw)
+  let result = imported.assess(cargo_snapshot())
+  assert_eq(result.exit_code(), 3)
+  guard result.to_json()
+    is {
+      "import": {
+        "packages": Array([_]),
+        "unresolved": Array([{ "code": "unsupported-component-type", .. }]),
+        ..
+      },
+      ..
+    } else {
+    fail("Unsupported 1.7 component disappeared")
+  }
+  try imported.inventory_json() catch {
+    _ => ()
+  } noraise {
+    _ => fail("Partial 1.7 inventory exported as complete")
+  }
+  let captured = @mtyuejian.capture_bom(cargo_snapshot(), imported)
+  let saved = captured.to_json().stringify()
+  assert_eq(
+    @mtyuejian.verify_bom_delivery(saved, expected_sha256=captured.digest())
+    .to_json()
+    .stringify(),
+    saved,
+  )
+  assert_true(captured.to_markdown().contains("1.7"))
+  captured.assessment().to_sarif(bom_uri="trivy.cdx.json", locate=true)
+  |> ignore
+}
+
+///|
+test "CycloneDX 1.7 rejects ambiguous identities before recovering with exact package data" {
+  let invalid = bom(
+    component("a", "2.0.0") + "," + component("a", "1.0.0"),
+    version="1.7",
+  )
+  try @mtyuejian.read_bom(invalid) catch {
+    @mtyuejian.Invalid(code~, ..) => assert_eq(code, "duplicate-bom-ref")
+  } noraise {
+    _ => fail("Duplicate 1.7 identity accepted")
+  }
+  let unsupported = bom(component("a", "2.0.0"), version="1.8")
+  try @mtyuejian.read_bom(unsupported) catch {
+    @mtyuejian.Invalid(code~, path~, ..) => {
+      assert_eq(code, "unsupported-bom-version")
+      assert_eq(path, "/specVersion")
+    }
+  } noraise {
+    _ => fail("Unknown specification version accepted")
+  }
+  assert_eq(
+    @mtyuejian.read_bom(bom(component("a", "2.0.0"), version="1.7"))
+    .assess(cargo_snapshot())
+    .exit_code(),
+    0,
+  )
 }

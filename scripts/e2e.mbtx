@@ -148,6 +148,8 @@ async fn main {
   run(target, ["check-cdx", "samples/missing.json", advisory], 2) |> ignore
   let bom = @fs.read_file("samples/cargo.cdx.json").text()
   @fs.write_file(path, @utf8.encode(bom.replace(old="\"1.6\"", new="\"1.7\"")))
+  run(target, ["check-cdx", path, advisory], 1) |> ignore
+  @fs.write_file(path, @utf8.encode(bom.replace(old="\"1.6\"", new="\"1.8\"")))
   run(target, ["check-cdx", path, advisory], 2) |> ignore
   @fs.write_file(
     path,

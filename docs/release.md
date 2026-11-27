@@ -19,6 +19,12 @@ candidate verification does not authorize upload.
 These corrections retain public signatures and the bytes and behavior of valid
 historical receipts. They tighten rejection at library input boundaries.
 
+The candidate also accepts CycloneDX 1.7 through the existing restricted Cargo
+projection. Empty component/package names are retained as unresolved identity
+instead of rejecting the entire BOM; incorrect JSON types still reject. Public
+signatures, valid historical receipts and version-evaluation profiles are unchanged.
+The [Trivy workflow](trivy-interop.md) records the real inputs behind these fixes.
+
 ## Public API and evidence compatibility
 
 The frozen candidate interface is [release/api-0.1.0.mbti](../release/api-0.1.0.mbti),

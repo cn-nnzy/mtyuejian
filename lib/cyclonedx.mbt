@@ -38,6 +38,20 @@ fn optional_text(
 }
 
 ///|
+// Some producers retain an unidentified package as name: "". Keep that node
+// unresolved rather than guessing from a producer-specific ID or aborting its BOM.
+fn optional_component_name(
+  fields : Map[String, Value],
+  path : String,
+) -> String? raise InputError {
+  if fields.get("name") is Some(Text("")) {
+    None
+  } else {
+    optional_text(fields, "name", path)
+  }
+}
+
+///|
 fn cargo_purl(value : String) -> (String, String)? {
   if !value.has_prefix("pkg:cargo/") ||
     value.contains("%") ||
@@ -93,7 +107,7 @@ fn import_component(
     ids[id] = ()
   }
   let kind = optional_text(fields, "type", path)
-  let name = optional_text(fields, "name", path)
+  let name = optional_component_name(fields, path)
   let version = optional_text(fields, "version", path)
   let purl = optional_text(fields, "purl", path)
   let group = optional_text(fields, "group", path)
@@ -148,7 +162,7 @@ fn import_component(
 }
 
 ///|
-/// Read CycloneDX 1.5/1.6 components, nested components and metadata.component.
+/// Read CycloneDX 1.5/1.6/1.7 components, nested components and metadata.component.
 /// This is an inventory adapter, not a full CycloneDX validator or graph analyzer.
 pub fn read_cyclonedx(
   input : String,
@@ -159,9 +173,9 @@ pub fn read_cyclonedx(
     reject("unsupported-bom", "/bomFormat", "Expected CycloneDX")
   }
   let version = string_field(fields, "specVersion", "")
-  if version != "1.5" && version != "1.6" {
+  if !["1.5", "1.6", "1.7"].contains(version) {
     reject(
-      "unsupported-bom-version", "/specVersion", "Supported CycloneDX versions are 1.5 and 1.6",
+      "unsupported-bom-version", "/specVersion", "Supported CycloneDX versions are 1.5, 1.6 and 1.7",
     )
   }
   if fields.get("version") is Some(value) {

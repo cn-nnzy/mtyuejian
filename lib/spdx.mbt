@@ -51,7 +51,7 @@ pub fn read_spdx(
       }
       ids[id] = ()
     }
-    let name = optional_text(item, "name", path)
+    let name = optional_component_name(item, path)
     let version = optional_text(item, "versionInfo", path)
     // Diagnostic metadata must not change admission of an otherwise opaque field.
     let component_kind = match item.get("primaryPackagePurpose") {

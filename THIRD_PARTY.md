@@ -61,7 +61,7 @@
   Used as behavioral references for a restricted inventory projection. No schema,
   specification text or upstream implementation is redistributed.
 
-GitHub Actions uses actions/checkout, actions/setup-python and ilammy/msvc-dev-cmd (MIT) by
+GitHub Actions uses actions/checkout, actions/setup-python, actions/upload-artifact and ilammy/msvc-dev-cmd (MIT) by
 reference. Their source is not redistributed in this repository.
 
 The optional producer integration invokes Syft 1.57.2 (Apache-2.0),
@@ -69,6 +69,18 @@ https://github.com/anchore/syft/releases/tag/v1.57.2. Its Linux x86-64 download
 is checked against the SHA-256 from that release's `syft_1.57.2_checksums.txt`.
 No Syft code or binary is redistributed. Cargo lock inputs in samples/producer
 were authored here under Apache-2.0; generated BOMs remain build artifacts.
+
+The second producer workflow invokes Trivy 0.76.2 (Apache-2.0),
+https://github.com/aquasecurity/trivy/releases/tag/v0.76.2. Linux x86-64 and local
+Windows x86-64 archives were checked against that release's
+`trivy_0.76.2_checksums.txt` before extraction. No Trivy implementation or binary
+is redistributed. Generated BOMs and native catalogs remain review artifacts;
+upstream MIT source notices and CC0 advisory attribution accompany the kit.
+CycloneDX 1.7 component identity/traversal was reviewed against the official JSON
+reference https://cyclonedx.org/docs/1.7/json/ and Apache-2.0 schema at
+https://github.com/CycloneDX/specification/blob/4b3f59453366e27c8073fd24e98bf21ef8892c8e/schema/bom-1.7.schema.json.
+No upstream schema, prose, test data or implementation was copied. The 1.7 and
+empty-name regression inputs were authored here after observing Trivy output.
 
 The complete-project workflow fetches historical exa and zoxide sources (both
 MIT) into build artifacts only, at the exact commits and primary-file digests in
