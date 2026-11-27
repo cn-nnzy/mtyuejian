@@ -151,6 +151,7 @@ moon run scripts/e2e.mbtx native
 核心库以四个后端为验证目标。文件 CLI 支持 Moonrun Wasm 与 native；JavaScript 核心测试需要 Node.js，Windows native 构建需要 MSVC 工具及 Windows SDK。未在对应运行环境执行的检查，不计作运行成功。
 
 测试覆盖真实公告的文件工作流、SemVer 标准排序、生成边界用例、畸形输入、确定性报告、快照往返和失败后的恢复。
+固定种子的属性测试在各后端运行。Linux CI 还记录真实与边界清单的耗时和峰值内存，复现方式见 [性能基线](docs/performance.md)。
 
 ## 许可
 

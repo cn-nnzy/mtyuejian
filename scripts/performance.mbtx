@@ -1,0 +1,175 @@
+----
+import {
+  "moonbitlang/async@0.22.10/fs",
+  "moonbitlang/async@0.22.10/shell",
+  "moonbitlang/core/encoding/hex",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.7/crypto",
+}
+----
+
+///|
+async fn checked(program : String, args : Array[String]) -> String {
+  let result = @shell.Cmd(program, args).output(timeout_ms=120000)
+  if result.exit_code() != 0 {
+    fail(
+      "\{program} \{Repr(args)} exited \{result.exit_code()}: \{result.stderr()}",
+    )
+  }
+  result.stdout()
+}
+
+///|
+async fn main {
+  let args = @env.args()
+  guard (args.length() == 2 || args.length() == 3) &&
+    (args.length() == 2 || args[2] == "--linux-ci") else {
+    fail(
+      "Usage: moon run scripts/performance.mbtx ZOXIDE_0_7_9_CDX [--linux-ci]",
+    )
+  }
+  let linux_ci = args.length() == 3
+  let bom = @fs.realpath(args[1])
+  guard @fs.file_size(bom) <= 1048576L else {
+    fail("Expected the pinned zoxide review BOM")
+  }
+  let bom_sha = @hex.encode(
+    Bytes::from_array(@crypto.sha256(@fs.read_file(bom).binary())[:])[:],
+  )
+  let commit = checked("git", ["rev-parse", "HEAD"]).trim().to_owned()
+  let host = if linux_ci {
+    let host = checked("uname", ["-sm"]).trim().to_owned()
+    assert_eq(host, "Linux x86_64")
+    host
+  } else {
+    "local"
+  }
+  let toolchain = checked("moon", ["version", "--all"]).trim().to_owned()
+  let build = checked("moon", [
+    "-C", "examples/benchmark", "build", ".", "--target", "wasm", "--release", "--deny-warn",
+    "--output-json",
+  ])
+  let paths = []
+  for line in build.split("\n") {
+    if line.has_prefix("{") &&
+      @json.parse(line)
+      is {
+        "$message_type": "artifact",
+        "package": "example/yuejian-benchmark",
+        "path": String(path),
+        ..
+      } {
+      paths.push(path)
+    }
+  }
+  guard paths is [binary] else { fail("Expected one Wasm benchmark artifact") }
+  let dir = "_build/yuejian-performance-" + @env.now().to_string()
+  @fs.mkdir(dir)
+  let rss_path = dir + "/rss.txt"
+  let measurements = []
+  let failures = []
+  for workload in ["real", "max-components", "max-json"] {
+    let phases = if workload == "max-json" {
+      ["parse"]
+    } else {
+      ["parse", "assess", "capture", "replay"]
+    }
+    for phase in phases {
+      let batch_times = []
+      let peaks = []
+      let mut input_units = 0.0
+      let mut iterations = 0.0
+      for _ in 0..<3 {
+        let invocation = [binary, workload, phase, bom]
+        let result = if linux_ci {
+          let result = checked(
+            "/usr/bin/time",
+            ["-o", rss_path, "-f", "%M", "moonrun"] + invocation,
+          )
+          let peak = @string.parse_int(@fs.read_file(rss_path).text().trim())
+          assert_true(peak > 0)
+          peaks.push(peak)
+          result
+        } else {
+          checked("moonrun", invocation)
+        }
+        guard @json.parse(result)
+          is {
+            "workload": String(actual_workload),
+            "phase": String(actual_phase),
+            "input_utf16": Number(units, ..),
+            "iterations": Number(count, ..),
+            "batch_ms": Number(batch, ..),
+            ..
+          } &&
+          actual_workload == workload &&
+          actual_phase == phase &&
+          count > 0.0 &&
+          batch >= 0.0 else {
+          fail("Unexpected benchmark output: " + result)
+        }
+        input_units = units
+        iterations = count
+        batch_times.push(batch)
+      }
+      batch_times.sort()
+      peaks.sort()
+      let median = batch_times[1] / iterations
+      let peak = peaks.last()
+      let (time_limit, rss_limit) = match (workload, phase) {
+        ("real", "parse") => (25.0, 131072)
+        ("real", "assess") => (3.0, 131072)
+        ("real", "capture") => (15.0, 131072)
+        ("real", "replay") => (35.0, 131072)
+        ("max-components", "assess") => (30.0, 262144)
+        ("max-components", "replay") => (180.0, 262144)
+        ("max-components", _) => (100.0, 262144)
+        _ => (120.0, 131072)
+      }
+      if linux_ci {
+        // Coarse CI tripwires allow for shared-runner variance. They apply to
+        // this release-Wasm harness and these workloads only.
+        if median > time_limit || peak.unwrap_or(0) > rss_limit {
+          failures.push(workload + "/" + phase)
+        }
+      }
+      let row : Json = {
+        "workload": Json(workload),
+        "phase": Json(phase),
+        "input_utf16": Json(input_units),
+        "iterations": Json(iterations),
+        "batch_ms": Json(batch_times),
+        "median_ms_per_operation": Json(median),
+        "peak_rss_kib": match peak {
+          Some(value) => Json(value)
+          None => Json::null()
+        },
+        "rss_samples_kib": Json(peaks),
+        "limit_ms_per_operation": Json(time_limit),
+        "limit_peak_rss_kib": Json(rss_limit),
+      }
+      measurements.push(row)
+      println(row.stringify())
+    }
+  }
+  let report : Json = {
+    "schema_version": 1,
+    "backend": "wasm-release",
+    "host": Json(host),
+    "toolchain": Json(toolchain),
+    "bom": Json(bom),
+    "bom_sha256": Json(bom_sha),
+    "source_commit": Json(commit),
+    "checks_enabled": Json(linux_ci),
+    "measurements": Json(measurements),
+    "threshold_failures": Json(failures),
+  }
+  let path = dir + "/report.json"
+  @fs.write_file(path, report)
+  println("Performance report: " + path)
+  guard failures.is_empty() else {
+    fail("Performance threshold exceeded: " + failures.join(", "))
+  }
+}

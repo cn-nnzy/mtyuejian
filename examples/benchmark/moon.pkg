@@ -1,0 +1,9 @@
+import {
+  "cn-nnzy/mtyuejian" @audit,
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+}
+
+supported_targets = "+wasm"
+
+pkgtype(kind: "executable")

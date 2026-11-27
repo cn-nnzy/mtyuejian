@@ -14,6 +14,8 @@ Adding commands, ecosystems or commits alone does not establish maturity.
 | Compatibility | Keep the frozen interface unchanged for compatible fixes. Replay the committed historical receipt and reject unknown evaluation profiles. |
 | End-to-end behavior | Exercise CLI gates, corrupted receipts, independent pins and source locations. Recompute the eight saved public-project BOM assessments and four comparisons. |
 | Portability | Run library tests on Wasm, Wasm-GC, JavaScript and native. Run file CLI workflows on Wasm and native across Linux, macOS and Windows CI. A compile check alone is insufficient. |
+| Runtime and memory | Run the release-Wasm benchmark on real and boundary-sized BOMs. Record stage timings and peak process RSS against documented CI limits. |
+| Generated properties | Use fixed seeds for malformed JSON, interval boundaries and mixed BOMs. Check recovery, source retention, deterministic output and pinned receipt replay across the library backends. |
 | Downstream use | Extract a fresh source archive and run the separate consumer on three portable backends. Keep registry consumption explicitly unverified until an approved publication is available. |
 
 The [CI workflow](../.github/workflows/check.yml) executes these checks; inspect
@@ -31,9 +33,9 @@ does not replace broader producer/downstream validation or capacity measurement.
 1. Try additional producer versions and independently maintained downstream
    projects. Record the original input, expected behavior and producer version;
    turn every confirmed defect into a regression fixture with provenance.
-2. Measure runtime and peak memory on representative inputs near the documented
-   budgets before making capacity or performance claims. Current resource limits
-   and passing correctness tests are not performance measurements.
+2. Extend the [measured Wasm baseline](performance.md) to downstream workloads
+   and other runtimes when adoption data warrants it. Keep tighter regression
+   thresholds tied to repeatable measurements on comparable hosts.
 3. Have a downstream developer complete inventory import, incomplete-evidence
    review, receipt handoff and replay using only the documentation. Record unclear
    diagnostics and workflow gaps, then fix them before expanding scope.

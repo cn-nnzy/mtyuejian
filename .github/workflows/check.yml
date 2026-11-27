@@ -42,7 +42,9 @@ jobs:
       - name: Format
         run: moon fmt --check
       - name: Workflow scripts format
-        run: moon fmt --check scripts/demo.mbtx scripts/e2e.mbtx scripts/package_smoke.mbtx scripts/syft_interop.mbtx scripts/real_projects.mbtx scripts/trivy_interop.mbtx scripts/crates_oracle.mbtx scripts/registry_smoke.mbtx scripts/release_check.mbtx
+        run: moon fmt --check scripts/demo.mbtx scripts/e2e.mbtx scripts/package_smoke.mbtx scripts/syft_interop.mbtx scripts/real_projects.mbtx scripts/trivy_interop.mbtx scripts/crates_oracle.mbtx scripts/registry_smoke.mbtx scripts/release_check.mbtx scripts/performance.mbtx
+      - name: Benchmark package format
+        run: moon -C examples/benchmark fmt --check
       - name: Interfaces
         run: moon info --target all
       - name: Interface drift
@@ -81,6 +83,16 @@ jobs:
       - name: Public project review across Syft and Trivy
         if: runner.os == 'Linux'
         run: moon run scripts/trivy_interop.mbtx --fetch-linux --fresh-syft
+      - name: Wasm runtime and peak memory regression
+        if: runner.os == 'Linux'
+        run: moon run scripts/performance.mbtx _build/yuejian-trivy-*/zoxide-0.7.9.cdx.json --linux-ci
+      - uses: actions/upload-artifact@v4
+        if: always() && runner.os == 'Linux'
+        with:
+          name: performance-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: ignore
+          path: _build/yuejian-performance-*/report.json
       - uses: actions/upload-artifact@v4
         if: runner.os == 'Linux'
         with:
