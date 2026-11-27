@@ -42,15 +42,16 @@ changing saved receipt formats or hiding unresolved artifacts.
 Complete-project review now checks four pinned exa/zoxide source revisions,
 accounts for every lock package across producer formats and resolved/unresolved
 assessment entries, and replays eight receipts and four upgrade comparisons.
+The opt-in crates.io ECOSYSTEM profile is bound into schema-2 snapshots and
+receipts, with conservative profile-change deltas and a pinned independent oracle.
 
 ## Possible subsequent capabilities
 
 1. Validate additional producers and hosted report consumers against the pinned
    complete-project workflow before broadening compatibility claims.
-2. Add individual ecosystem version-ordering profiles only with reference data,
-   a documented identity convention and meaningful differential tests.
-   npm intake requires its ECOSYSTEM ordering semantics as well as PURL identity;
-   accepting names alone is not considered a complete milestone.
+2. Extend ecosystem ordering only with reference data and differential tests.
+   crates.io ECOSYSTEM ordering is now an explicit, versioned snapshot profile;
+   npm and other ecosystems still require their own complete identity/ordering work.
 
 Git graph matching, online advisory database management, VEX policy, dependency
 resolution, automated upgrades and exploitability analysis are not implemented.

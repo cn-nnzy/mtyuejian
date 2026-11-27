@@ -157,7 +157,9 @@ pub fn Changes::exit_code(self : Changes) -> Int32 {
   if self.entries.any(e => e.new_hit) {
     return 1
   }
-  if !self.identities.is_empty() ||
+  if self.before.assessment.snapshot.crates_io !=
+    self.after.assessment.snapshot.crates_io ||
+    !self.identities.is_empty() ||
     !self.after.assessment.unscoped.is_empty() ||
     self.after.assessment.decisions.any(d => d.incomplete) ||
     self.entries.any(e => e.missing) {
@@ -168,7 +170,7 @@ pub fn Changes::exit_code(self : Changes) -> Int32 {
 
 ///|
 pub fn Changes::to_json(self : Changes) -> Json {
-  {
+  let view : Json = {
     "schema_version": 1,
     "scope": Json(
       "assessment changes, not a safety verdict or vulnerability waiver",
@@ -201,4 +203,21 @@ pub fn Changes::to_json(self : Changes) -> Json {
       }),
     ),
   }
+  evaluation_changes(
+    view,
+    self.before.assessment.snapshot,
+    self.after.assessment.snapshot,
+  )
+}
+
+///|
+fn evaluation_changes(view : Json, before : Snapshot, after : Snapshot) -> Json {
+  if (before.crates_io || after.crates_io) && view is Object(fields) {
+    fields["evaluation_profile_changed"] = Json(
+      before.crates_io != after.crates_io,
+    )
+    fields["before_evaluation_profile"] = Json(before.evaluation_label())
+    fields["current_evaluation_profile"] = Json(after.evaluation_label())
+  }
+  view
 }

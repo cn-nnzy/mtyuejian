@@ -278,7 +278,7 @@ pub fn BomAssessment::exit_code(self : BomAssessment) -> Int32 {
 
 ///|
 pub fn BomAssessment::to_json(self : BomAssessment) -> Json {
-  {
+  let view : Json = {
     "schema_version": 1,
     "scope": Json(
       "all listed components; Cargo PURL profile; no dependency reachability claim",
@@ -290,4 +290,5 @@ pub fn BomAssessment::to_json(self : BomAssessment) -> Json {
       Some(result) => result.to_json()
     },
   }
+  with_evaluation(view, self.snapshot)
 }

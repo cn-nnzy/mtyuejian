@@ -1,5 +1,9 @@
 # Library example
 
+Enable the explicitly versioned crates.io profile with
+`Snapshot::new(documents).with_crates_io()`. Original/default snapshots preserve
+their previous semantics. See [the profile contract](../docs/crates-io.md).
+
 The example uses a synthetic advisory. Use `samples/RUSTSEC-2020-0071.json`
 with the CLI for a real source record.
 

@@ -5,7 +5,7 @@ an end-to-end review workflow. It is a source version, not a Mooncakes release.
 
 | Available now | Deliberate boundary |
 | --- | --- |
-| Strict OSV reading, SEMVER intervals and explicit versions | ECOSYSTEM/GIT/unknown range semantics stay undetermined |
+| Strict OSV reading, SEMVER intervals, explicit versions and an opt-in crates.io profile | Default ECOSYSTEM, other ecosystems, Git and unknown ranges stay undetermined |
 | Deterministic assessment, raw-source snapshots and SHA-256 receipts | Integrity and replay do not authenticate a publisher |
 | Independent pins and conservative receipt comparison | Approval pins must come from a trusted external source |
 | Cargo projection from CycloneDX 1.5/1.6 and SPDX 2.3 | Unsupported nodes stay visible and prevent a complete verdict |
@@ -13,8 +13,8 @@ an end-to-end review workflow. It is a source version, not a Mooncakes release.
 | Public consumer, complete demo kit and archive smoke check | Dependency acquisition still uses the MoonBit cache/registry |
 | Fixed-version Syft producer integration | Four minimal cases plus eight pinned exa/zoxide BOM cases; not all producer formats or applications |
 
-The core has 139 unit/documentation tests per supported backend. The CLI runner
-checks 128 scenarios, including malformed UTF-8/JSON, recovery after errors,
+The core has 151 unit/documentation tests per supported backend. The CLI runner
+checks 148 scenarios, including malformed UTF-8/JSON, recovery after errors,
 receipt replacement/pinning, unknown BOM nodes and source location binding.
 Independent tools validate the SARIF schema and render untrusted Markdown.
 The [complete-project workflow](real-projects.md) also accounts for every lock

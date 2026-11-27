@@ -11,6 +11,11 @@ fn coverage_advice(code : String) -> (String, String, String) {
         "unsupported_version_rule", "Version evidence uses unsupported range or Git-tag semantics.",
         "Review the original range and use a tool supporting its ecosystem or Git rules. Keep this decision incomplete.",
       )
+    "query-is-not-crates-version" =>
+      (
+        "version_syntax", "The installed version is outside the strict crates.io version profile.",
+        "Verify the original version spelling, u64 core fields and length limit; do not coerce it or treat it as a negative match.",
+      )
     "query-is-not-semver" =>
       (
         "version_syntax", "The installed version cannot be ordered as strict SemVer.",
@@ -271,7 +276,7 @@ fn coverage_view(
   } else {
     result.exit_code()
   }
-  {
+  let view : Json = {
     "schema_version": 1,
     "profile": "coverage-review-v1",
     "scope": "supplied inventory and advisory snapshot only; counts are not a safety score or unique vulnerability count",
@@ -283,6 +288,7 @@ fn coverage_view(
     "packages": Json(packages),
     "diagnostics": Json(diagnostics),
   }
+  with_evaluation(view, result.snapshot)
 }
 
 ///|

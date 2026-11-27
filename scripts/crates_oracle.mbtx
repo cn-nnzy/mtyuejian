@@ -1,0 +1,149 @@
+----
+import {
+  "moonbitlang/async/fs",
+  "moonbitlang/async/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+///|
+async fn precedence(
+  reference : String,
+  cache : Map[String, Int32],
+  a : String,
+  b : String,
+) -> Int32 {
+  let key = Json([Json(a), Json(b)]).stringify()
+  if cache.get(key) is Some(order) {
+    return order
+  }
+  let result = @shell.Cmd(reference, ["compare", a, b]).output(timeout_ms=10000)
+  result.check()
+  let order = match result.stdout().trim() {
+    "-1" => -1
+    "0" => 0
+    "1" => 1
+    _ => fail("Unexpected independent comparator output")
+  }
+  cache[key] = order
+  order
+}
+
+///|
+async fn main {
+  let reference = @env.args().get(1).unwrap_or("pysemver")
+  let version = @shell.Cmd(reference, ["--version"]).output()
+  version.check()
+  assert_eq(version.stdout().trim().to_owned(), "semver 3.0.4")
+  let queries = [
+    "0.0.0-0", "0.0.0", "0.2.22", "0.2.23", "1.0.0-A", "1.0.0-alpha", "1.0.0-alpha.1",
+    "1.0.0-alpha.2", "1.0.0-alpha.10", "1.0.0-alpha.beta", "1.0.0-beta.2", "1.0.0-beta.11",
+    "1.0.0-rc.1", "1.0.0", "1.0.0+build.01", "1.0.1", "2.0.0-0", "2.0.0", "2.0.0+build",
+    "3.0.0", "3.0.1", "4294967296.0.0", "18446744073709551615.0.0",
+  ]
+  // Each case independently describes the intended interval; only ordering is
+  // delegated to pysemver, as used by OSV's SemVer helper on this strict domain.
+  let cases : Array[(String, String?, String?, Bool)] = [
+    ("fixed", None, Some("0.2.23"), false),
+    ("prerelease", Some("1.0.0-alpha.2"), Some("1.0.0"), false),
+    ("inclusive", None, Some("1.0.0"), true),
+    ("build", Some("1.0.0+start"), Some("2.0.0+end"), false),
+    ("open", Some("2.0.0"), None, false),
+    ("u64", Some("4294967296.0.0"), Some("18446744073709551615.0.0"), false),
+  ]
+  let dir = "_build/yuejian-crates-oracle-" + @env.now().to_string()
+  @fs.mkdir(dir)
+  let inventory : Json = {
+    "schema_version": 1,
+    "packages": Json(
+      queries.mapi((i, v) => {
+        Json::object({
+          "id": Json("q-" + i.to_string()),
+          "ecosystem": Json("crates.io"),
+          "name": Json("demo"),
+          "version": Json(v),
+        })
+      }),
+    ),
+  }
+  let inventory_path = dir + "/inventory.json"
+  @fs.write_file(inventory_path, inventory)
+  let cache : Map[String, Int32] = Map([])
+  let summaries : Array[Json] = []
+  for (name, lower, upper, inclusive) in cases {
+    let events : Array[Json] = [{ "introduced": Json(lower.unwrap_or("0")) }]
+    if upper is Some(upper) {
+      events.push(
+        if inclusive {
+          { "last_affected": Json(upper) }
+        } else {
+          { "fixed": Json(upper) }
+        },
+      )
+    }
+    let record : Json = {
+      "id": Json("x_ORACLE-" + name),
+      "modified": "2026-11-26T00:00:00Z",
+      "affected": [
+        {
+          "package": { "ecosystem": "crates.io", "name": "demo" },
+          "ranges": [{ "type": "ECOSYSTEM", "events": Json(events) }],
+        },
+      ],
+    }
+    let path = dir + "/" + name + ".json"
+    @fs.write_file(path, record)
+    let result = @shell.Cmd("moon", [
+      "run", "--deny-warn", "lib/cli", "--", "check", "--crates-io", inventory_path,
+      path,
+    ]).output(timeout_ms=120000)
+    assert_eq(result.exit_code(), 1)
+    @fs.write_file(dir + "/" + name + ".report.json", result.stdout())
+    guard @json.parse(result.stdout()) is { "decisions": Array(decisions), .. } &&
+      decisions.length() == queries.length() else {
+      fail("Oracle decision set incomplete")
+    }
+    for decision in decisions {
+      guard decision
+        is {
+          "package": { "version": String(query), .. },
+          "outcome": String(actual),
+          "incomplete": false,
+          ..
+        } else {
+        fail("Strict valid query was not assessed")
+      }
+      let above = match lower {
+        None => true
+        Some(lower) => precedence(reference, cache, query, lower) >= 0
+      }
+      let below = match upper {
+        None => true
+        Some(upper) => {
+          let order = precedence(reference, cache, query, upper)
+          if inclusive {
+            order <= 0
+          } else {
+            order < 0
+          }
+        }
+      }
+      assert_eq(actual, if above && below { "affected" } else { "not_matched" })
+    }
+    summaries.push({ "case": Json(name), "queries": Json(queries.length()) })
+  }
+  @fs.write_file(
+    dir + "/manifest.json",
+    Json::object({
+      "reference": "python-semver 3.0.4 (BSD-3-Clause)",
+      "scope": "strict crate versions only; not OSV coercion or Cargo requirement matching",
+      "cases": Json(summaries),
+      "decisions": Json(cases.length() * queries.length()),
+    }),
+  )
+  println(
+    "\{cases.length() * queries.length()} crates.io decisions matched the independent pysemver comparator; " +
+    dir,
+  )
+}

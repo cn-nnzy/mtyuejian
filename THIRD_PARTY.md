@@ -1,5 +1,15 @@
 # Sources and licenses
 
+- crates.io evaluation references OSV's ecosystem mapping and SemVer helper at
+  https://github.com/google/osv.dev/tree/d60b14dd943e35d7b790c8649da2804bd9e48a01/osv
+  (Apache-2.0), and Rust semver 1.0.28's documented u64 syntax and precedence
+  (MIT OR Apache-2.0, https://docs.rs/semver/1.0.28/semver/struct.Version.html).
+  No implementation or upstream tests were copied. The independent oracle invokes
+  python-semver 3.0.4's CLI (BSD-3-Clause,
+  https://github.com/python-semver/python-semver/tree/3.0.4); no Python code is
+  authored or vendored here. The existing SemVer/interval implementation is reused
+  within a deliberately strict, explicitly versioned profile.
+
 - Project code: Apache-2.0. No third-party implementation code was copied into
   the library. The private algorithms were written against the references below.
 - OSV format and evaluation semantics:

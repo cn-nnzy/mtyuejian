@@ -126,6 +126,7 @@ pub struct Snapshot {
 }
 pub fn Snapshot::new(ArrayView[Advisory]) -> Self raise InputError
 pub fn Snapshot::to_json(Self) -> @json.Json
+pub fn Snapshot::with_crates_io(Self) -> Self raise InputError
 
 // Type aliases
 

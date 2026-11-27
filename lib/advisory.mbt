@@ -19,6 +19,8 @@ priv struct Range {
   kind : String
   intervals : Array[Interval]
   limits : Array[Event]
+  crates_io : Bool
+  raw : Value?
 }
 
 ///|
@@ -93,7 +95,11 @@ fn event_compare(a : Event, b : Event) -> Int32 {
 }
 
 ///|
-fn read_range(value : Value, path : String) -> Range raise InputError {
+fn read_range(
+  value : Value,
+  path : String,
+  crates_io~ : Bool = false,
+) -> Range raise InputError {
   let fields = object(value, path)
   known_fields(fields, ["type", "events", "repo", "database_specific"], path)
   let kind = string_field(fields, "type", path)
@@ -109,12 +115,28 @@ fn read_range(value : Value, path : String) -> Range raise InputError {
       "A range needs at least one event",
     )
   }
-  if kind != "SEMVER" {
+  let crates_io = crates_io && kind == "ECOSYSTEM"
+  let transition_label = if crates_io {
+    "crates.io ECOSYSTEM"
+  } else {
+    "SEMVER"
+  }
+  if kind != "SEMVER" && !crates_io {
     // Preserve unsupported event syntax in raw source; never pretend to evaluate it.
     if kind == "GIT" {
       string_field(fields, "repo", path) |> ignore
     }
-    return { kind, intervals: [], limits: [], }
+    return {
+      kind,
+      intervals: [],
+      limits: [],
+      crates_io: false,
+      raw: if kind == "ECOSYSTEM" {
+        Some(value)
+      } else {
+        None
+      },
+    }
   }
   let controls : Array[Event] = []
   let limits = []
@@ -123,7 +145,11 @@ fn read_range(value : Value, path : String) -> Range raise InputError {
     let event = object(value, ep)
     if event.length() != 1 {
       reject(
-        "invalid-event", ep, "Each SEMVER event must contain exactly one transition",
+        "invalid-event",
+        ep,
+        "Each " +
+        transition_label +
+        " event must contain exactly one transition",
       )
     }
     for key, value in event {
@@ -131,7 +157,7 @@ fn read_range(value : Value, path : String) -> Range raise InputError {
         reject(
           "unsupported-event",
           pointer(ep, key),
-          "Unknown SEMVER transition",
+          "Unknown " + transition_label + " transition",
         )
       }
       let value = text(value, pointer(ep, key))
@@ -139,7 +165,13 @@ fn read_range(value : Value, path : String) -> Range raise InputError {
         (key == "limit" && value == "*") {
         None
       } else {
-        Some(version_at(value, pointer(ep, key)))
+        Some(
+          if crates_io {
+            crate_version_at(value, pointer(ep, key))
+          } else {
+            version_at(value, pointer(ep, key))
+          },
+        )
       }
       let event = Event::{ kind: key, version, index: i, }
       if key == "limit" {
@@ -182,7 +214,7 @@ fn read_range(value : Value, path : String) -> Range raise InputError {
           pointer(path, "events"),
           "A closing event has no preceding introduction",
         )
-        return { kind, intervals: [], limits, }
+        return { kind, intervals: [], limits, crates_io, raw: None, }
       }
       intervals.push({
         lower: start.version,
@@ -208,10 +240,10 @@ fn read_range(value : Value, path : String) -> Range raise InputError {
     reject(
       "missing-introduction",
       pointer(path, "events"),
-      "A SEMVER range needs an introduced event",
+      "A " + transition_label + " range needs an introduced event",
     )
   }
-  { kind, intervals, limits, }
+  { kind, intervals, limits, crates_io, raw: None, }
 }
 
 ///|

@@ -124,6 +124,7 @@ SPDX 的单一 Cargo PURL、外部文档和身份冲突规则见 [SPDX 接入](d
 - 原始事件可以无序，报告仍引用原文索引。存在矛盾或无法消歧的转换时拒绝输入。
 - `versions` 按原始字符串精确匹配，与可解释范围取并集。同一个 affected 条目含 GIT 范围时，不把其中的版本枚举当作可靠的包版本。
 - `ECOSYSTEM`、`GIT` 及未知范围保留为不完整证据。已知正向命中仍报告 `affected`，并保留 `incomplete` 标记。
+- 可显式启用[crates.io 判定规则](docs/crates-io.md)：用 `--crates-io` 或 `Snapshot::with_crates_io()` 解释 crates.io 的 `ECOSYSTEM` 范围。规则版本写入快照；旧收据保留原行为，其他生态与 Git 范围继续保留不完整证据。
 
 不支持 Git 图遍历、生态专有版本排序、在线数据库同步、锁文件发现、自动升级建议、VEX 豁免或实际可利用性分析。没有 Mooncakes 公告数据源时，不能把本项目描述为 Mooncakes 全生态漏洞扫描器。
 

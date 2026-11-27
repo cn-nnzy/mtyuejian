@@ -54,13 +54,29 @@ pub struct Assessment {
 fn range_evidence(
   range : Range,
   query : Version?,
+  crate_query : Version?,
   path : String,
 ) -> (Bool, Bool, Array[Evidence]) {
-  if range.kind != "SEMVER" {
+  if range.kind != "SEMVER" && !range.crates_io {
     return (false, true, [{ path, code: "unsupported-range", indices: [], }])
   }
-  guard query is Some(query) else {
-    return (false, true, [{ path, code: "query-is-not-semver", indices: [], }])
+  let selected_query = if range.crates_io { crate_query } else { query }
+  guard selected_query is Some(query) else {
+    return (
+      false,
+      true,
+      [
+        {
+          path,
+          code: if range.crates_io {
+            "query-is-not-crates-version"
+          } else {
+            "query-is-not-semver"
+          },
+          indices: [],
+        },
+      ],
+    )
   }
   if !range.limits.is_empty() {
     let before_limit = range.limits.any(limit => {
@@ -105,10 +121,38 @@ fn range_evidence(
       for limit in range.limits {
         indices.push(limit.index)
       }
-      return (true, false, [{ path, code: "semver-interval", indices, }])
+      return (
+        true,
+        false,
+        [
+          {
+            path,
+            code: if range.crates_io {
+              "crates-io-interval"
+            } else {
+              "semver-interval"
+            },
+            indices,
+          },
+        ],
+      )
     }
   }
-  (false, false, [{ path, code: "outside-semver-intervals", indices: [], }])
+  (
+    false,
+    false,
+    [
+      {
+        path,
+        code: if range.crates_io {
+          "outside-crates-io-intervals"
+        } else {
+          "outside-semver-intervals"
+        },
+        indices: [],
+      },
+    ],
+  )
 }
 
 ///|
@@ -129,6 +173,7 @@ fn decide(item : Package, advisory : Advisory) -> Decision? {
     })
   }
   let query = parse_version(item.version)
+  let crate_query = parse_crate_version(item.version)
   let evidence = []
   let mut hit = false
   let mut incomplete = false
@@ -165,6 +210,7 @@ fn decide(item : Package, advisory : Advisory) -> Decision? {
       let (matched, unknown, details) = range_evidence(
         range,
         query,
+        crate_query,
         pointer(pointer(path, "ranges"), j.to_string()),
       )
       hit = hit || matched
@@ -281,7 +327,7 @@ pub fn Assessment::to_json(self : Assessment) -> Json {
       .filter(d => d.outcome == outcome)
       .length()
   }
-  {
+  let view : Json = {
     "schema_version": 1,
     "scope": "version-range-only; supplied snapshot; no exploitability claim",
     "exit_code": Json(self.exit_code()),
@@ -304,4 +350,5 @@ pub fn Assessment::to_json(self : Assessment) -> Json {
     ),
     "decisions": Json(self.decisions.map(d => d.to_json())),
   }
+  with_evaluation(view, self.snapshot)
 }

@@ -74,6 +74,9 @@ fn usage() -> String {
     #|  sarif DELIVERY.json INVENTORY_URI
     #|  sarif-cdx BOM.json BOM_URI ADVISORY.json [ADVISORY.json ...]
     #|  help
+    #|Add --crates-io immediately after check, capture, check-bom, capture-bom,
+    #|check-cdx, snapshot or a BOM SARIF command to opt into crates.io ECOSYSTEM
+    #|ordering. Saved snapshots/receipts retain the selected evaluation profile.
     #|Reports and snapshots are JSON on stdout. Diagnostics are JSON on stderr.
     #|Exit: 0 not matched in supplied snapshot; 1 known version-range hit;
     #|      2 invalid input or usage; 3 incomplete assessment.
@@ -83,7 +86,10 @@ fn usage() -> String {
 }
 
 ///|
-async fn snapshot_files(paths : ArrayView[String]) -> @audit.Snapshot {
+async fn snapshot_files(
+  paths : ArrayView[String],
+  crates_io~ : Bool = false,
+) -> @audit.Snapshot {
   if paths.is_empty() || paths.length() > 64 {
     raise @audit.Invalid(
       code="snapshot-limit",
@@ -95,11 +101,37 @@ async fn snapshot_files(paths : ArrayView[String]) -> @audit.Snapshot {
   for path in paths {
     documents.push(@audit.read_advisory(read_file(path), origin=path))
   }
-  @audit.Snapshot::new(documents)
+  let snapshot = @audit.Snapshot::new(documents)
+  if crates_io {
+    snapshot.with_crates_io()
+  } else {
+    snapshot
+  }
 }
 
 ///|
-async fn execute(args : Array[String]) -> Int32 {
+async fn execute(input : Array[String]) -> Int32 {
+  let crates_io = input.get(1) == Some("--crates-io")
+  if crates_io &&
+    (
+      !input
+      .get(0)
+      .map(c => {
+        [
+          "check", "capture", "snapshot", "check-cdx", "check-bom", "capture-bom",
+          "sarif-bom", "sarif-bom-located", "sarif-cdx",
+        ].contains(c)
+      })
+      .unwrap_or(false) ||
+      input.filter(a => a == "--crates-io").length() != 1
+    ) {
+    raise @audit.Invalid(
+      code="usage",
+      path="",
+      message="--crates-io is accepted once, immediately after an assessment or snapshot command",
+    )
+  }
+  let args = if crates_io { [input[0]] + input[2:].to_owned() } else { input }
   if (
       args.length() == 2 ||
       (args.length() == 4 && args[1] == "--expected-sha256")
@@ -183,19 +215,21 @@ async fn execute(args : Array[String]) -> Int32 {
     return 0
   }
   if args.length() >= 2 && args[0] == "snapshot" {
-    println(snapshot_files(args[1:]).to_json().stringify())
+    println(snapshot_files(args[1:], crates_io~).to_json().stringify())
     return 0
   }
   if args.length() >= 3 && args[0] == "check" {
     let items = @audit.read_inventory(read_file(args[1]))
-    let result = @audit.assess(snapshot_files(args[2:]), items)
+    let result = @audit.assess(snapshot_files(args[2:], crates_io~), items)
     println(result.to_json().stringify())
     return result.exit_code()
   }
   if args.length() >= 3 && args[0] == "capture" {
     let items = @audit.read_inventory(read_file(args[1]))
     println(
-      @audit.capture(snapshot_files(args[2:]), items).to_json().stringify(),
+      @audit.capture(snapshot_files(args[2:], crates_io~), items)
+      .to_json()
+      .stringify(),
     )
     return 0
   }
@@ -231,20 +265,20 @@ async fn execute(args : Array[String]) -> Int32 {
   }
   if args.length() >= 3 && args[0] == "check-cdx" {
     let imported = @audit.read_cyclonedx(read_file(args[1]), origin=args[1])
-    let result = imported.assess(snapshot_files(args[2:]))
+    let result = imported.assess(snapshot_files(args[2:], crates_io~))
     println(result.to_json().stringify())
     return result.exit_code()
   }
   if args.length() >= 3 && args[0] == "check-bom" {
     let imported = @audit.read_bom(read_file(args[1]), origin=args[1])
-    let result = imported.assess(snapshot_files(args[2:]))
+    let result = imported.assess(snapshot_files(args[2:], crates_io~))
     println(result.to_json().stringify())
     return result.exit_code()
   }
   if args.length() >= 3 && args[0] == "capture-bom" {
     let imported = @audit.read_bom(read_file(args[1]), origin=args[1])
     println(
-      @audit.capture_bom(snapshot_files(args[2:]), imported)
+      @audit.capture_bom(snapshot_files(args[2:], crates_io~), imported)
       .to_json()
       .stringify(),
     )
@@ -264,7 +298,7 @@ async fn execute(args : Array[String]) -> Int32 {
   }
   if args.length() >= 4 && args[0] == "sarif-bom" {
     let imported = @audit.read_bom(read_file(args[1]), origin=args[1])
-    let result = imported.assess(snapshot_files(args[3:]))
+    let result = imported.assess(snapshot_files(args[3:], crates_io~))
     println(result.to_sarif(bom_uri=args[2]).stringify())
     return result.exit_code()
   }
@@ -284,13 +318,13 @@ async fn execute(args : Array[String]) -> Int32 {
   }
   if args.length() >= 4 && args[0] == "sarif-bom-located" {
     let imported = @audit.read_bom(read_file(args[1]), origin=args[1])
-    let result = imported.assess(snapshot_files(args[3:]))
+    let result = imported.assess(snapshot_files(args[3:], crates_io~))
     println(result.to_sarif(bom_uri=args[2], locate=true).stringify())
     return result.exit_code()
   }
   if args.length() >= 4 && args[0] == "sarif-cdx" {
     let imported = @audit.read_cyclonedx(read_file(args[1]), origin=args[1])
-    let result = imported.assess(snapshot_files(args[3:]))
+    let result = imported.assess(snapshot_files(args[3:], crates_io~))
     println(result.to_sarif(bom_uri=args[2]).stringify())
     return result.exit_code()
   }

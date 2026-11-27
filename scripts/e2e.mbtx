@@ -9,11 +9,15 @@ import {
 ----
 
 ///|
+let scenario_count : Ref[Int32] = Ref(0)
+
+///|
 async fn run(
   target : String,
   args : Array[String],
   expected : Int32,
 ) -> @shell.Output {
+  scenario_count.val += 1
   let result = @shell.Cmd(
     "moon",
     ["run", "--target", target, "--deny-warn", "lib/cli", "--"] + args,
@@ -541,7 +545,73 @@ async fn main {
     affected.stdout().trim().to_owned(),
     @fs.read_file(legacy).text().trim().to_owned(),
   )
+  let crates_doc = "samples/GHSA-wcg3-cvx6-7396.json"
+  run(target, ["check", "--crates-io", "samples/installed.json", crates_doc], 1)
+  |> ignore
+  run(target, ["check", "--crates-io", "samples/fixed.json", crates_doc], 0)
+  |> ignore
+  let crates_hit = run(
+    target,
+    ["capture", "--crates-io", "samples/installed.json", crates_doc],
+    0,
+  )
+  @fs.write_file(delivery_path, crates_hit.stdout())
+  run(target, ["verify", delivery_path], 1) |> ignore
+  run(target, ["coverage", delivery_path], 1) |> ignore
+  run(target, ["review", delivery_path], 0) |> ignore
+  let crates_snapshot = run(target, ["snapshot", "--crates-io", crates_doc], 0)
+  @fs.write_file(path, crates_snapshot.stdout())
+  run(target, ["replay", "samples/fixed.json", path], 0) |> ignore
+  let crates_bom = run(
+    target,
+    ["capture-bom", "--crates-io", "samples/cargo-fixed.cdx.json", crates_doc],
+    0,
+  )
+  @fs.write_file(path, crates_bom.stdout())
+  run(target, ["verify-bom", path], 0) |> ignore
+  run(
+    target,
+    [
+      "sarif-bom-located", "--crates-io", "samples/cargo-fixed.cdx.json", "samples/cargo-fixed.cdx.json",
+      crates_doc,
+    ],
+    0,
+  )
+  |> ignore
+  let old_fixed = run(target, ["capture", "samples/fixed.json", crates_doc], 0)
+  let crates_fixed = run(
+    target,
+    ["capture", "--crates-io", "samples/fixed.json", crates_doc],
+    0,
+  )
+  @fs.write_file(prior_path, old_fixed.stdout())
+  @fs.write_file(delivery_path, crates_fixed.stdout())
+  run(target, ["changes", prior_path, delivery_path], 3) |> ignore
+  run(target, ["verify", "--crates-io", delivery_path], 2) |> ignore
+  run(
+    target,
+    ["check", "--crates-io", "--crates-io", "samples/fixed.json", crates_doc],
+    2,
+  )
+  |> ignore
+  @fs.write_file(
+    path,
+    crates_snapshot
+    .stdout()
+    .replace(old="crates-io-semver-v1", new="unknown-v1"),
+  )
+  run(target, ["replay", "samples/fixed.json", path], 2) |> ignore
+  @fs.write_file(path, crates_snapshot.stdout())
+  run(target, ["replay", "samples/fixed.json", path], 0) |> ignore
+  let old_bom = run(
+    target,
+    ["capture-bom", "samples/cargo-fixed.cdx.json", crates_doc],
+    0,
+  )
+  @fs.write_file(prior_path, old_bom.stdout())
+  @fs.write_file(path, crates_bom.stdout())
+  run(target, ["changes-bom", prior_path, path], 3) |> ignore
   println(
-    "128 end-to-end scenarios passed on \{target}; legacy receipt compatibility, coverage and recovery verified",
+    "\{scenario_count.val} CLI scenarios passed on \{target}; crates profile, legacy receipt compatibility and recovery verified",
   )
 }

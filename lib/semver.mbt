@@ -129,3 +129,24 @@ fn version_at(value : String, path : String) -> Version raise InputError {
   }
   version
 }
+
+///|
+// Cargo's u64 core fields, with SemVer precedence (not Rust Version's total Ord).
+fn parse_crate_version(value : String) -> Version? {
+  guard parse_version(value) is Some(version) else { return None }
+  if version.core.any(part => numeric_compare(part, "18446744073709551615") > 0) {
+    return None
+  }
+  Some(version)
+}
+
+///|
+fn crate_version_at(value : String, path : String) -> Version raise InputError {
+  guard parse_crate_version(value) is Some(version) else {
+    reject(
+      "invalid-crates-version", path, "Expected strict SemVer with u64 core fields, at most 256 code units; no coercion is applied",
+    )
+    return { core: [], pre: [], }
+  }
+  version
+}

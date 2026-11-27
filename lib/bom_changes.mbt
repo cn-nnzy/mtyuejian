@@ -122,7 +122,9 @@ pub fn BomChanges::exit_code(self : BomChanges) -> Int32 {
     return 1
   }
   let current = resolved_view(self.after.result)
-  if self.before.result.imported.profile != self.after.result.imported.profile ||
+  if self.before.result.snapshot.crates_io !=
+    self.after.result.snapshot.crates_io ||
+    self.before.result.imported.profile != self.after.result.imported.profile ||
     !self.identities.is_empty() ||
     !self.after.result.imported.unresolved.is_empty() ||
     !current.unscoped.is_empty() ||
@@ -136,7 +138,7 @@ pub fn BomChanges::exit_code(self : BomChanges) -> Int32 {
 
 ///|
 pub fn BomChanges::to_json(self : BomChanges) -> Json {
-  {
+  let view : Json = {
     "schema_version": 1,
     "scope": Json(
       "BOM assessment changes; removed unknown evidence requires review; not a safety verdict",
@@ -193,4 +195,9 @@ pub fn BomChanges::to_json(self : BomChanges) -> Json {
       }),
     ),
   }
+  evaluation_changes(
+    view,
+    self.before.result.snapshot,
+    self.after.result.snapshot,
+  )
 }
