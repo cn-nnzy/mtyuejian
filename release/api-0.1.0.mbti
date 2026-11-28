@@ -15,6 +15,8 @@ pub fn capture_bom(Snapshot, BomImport) -> BomDelivery raise InputError
 
 pub fn compare_bom_deliveries(BomDelivery, BomDelivery) -> BomChanges
 
+pub fn compare_bom_scope(BomImport, BomImport) -> BomScopeComparison
+
 pub fn compare_deliveries(Delivery, Delivery) -> Changes
 
 pub fn inventory_json(ArrayView[Package]) -> @json.Json raise InputError
@@ -87,6 +89,12 @@ pub fn BomImport::assess(Self, Snapshot) -> BomAssessment raise InputError
 pub fn BomImport::inventory_json(Self) -> @json.Json raise InputError
 pub fn BomImport::source(Self) -> String
 pub fn BomImport::to_json(Self) -> @json.Json
+
+pub struct BomScopeComparison {
+  // private fields
+}
+pub fn BomScopeComparison::exit_code(Self) -> Int32
+pub fn BomScopeComparison::to_json(Self) -> @json.Json
 
 pub struct Changes {
   // private fields

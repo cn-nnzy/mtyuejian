@@ -27,6 +27,11 @@ The [Trivy workflow](trivy-interop.md) records the real inputs behind these fixe
 
 ## Public API and evidence compatibility
 
+The 2026-11-28 candidate adds `compare_bom_scope` with the
+`BomScopeComparison` view and exit code. The interface baseline incorporates
+these additive exports while the candidate is in source review.
+The [scope comparison guide](bom-scope.md) documents the result contract.
+
 The frozen candidate interface is [release/api-0.1.0.mbti](../release/api-0.1.0.mbti),
 copied exactly from `moon info`. Release preparation refuses interface drift.
 Patch releases preserve these signatures for valid inputs. New capabilities are

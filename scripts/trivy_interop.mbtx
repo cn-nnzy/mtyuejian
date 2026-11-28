@@ -181,6 +181,20 @@ async fn verify(dir : String, manifest : Json, target : String) -> Unit {
       ),
       @fs.read_file(confined(dir, field(entry, "coverage"))).text(),
     )
+    if entry is { "scope_comparison": comparison, .. } {
+      for key in ["left", "right", "report"] {
+        guard hashes.contains(field(comparison, key)) else {
+          fail("Scope comparison artifact is not covered by the manifest")
+        }
+      }
+      let left = confined(dir, field(comparison, "left"))
+      let right = confined(dir, field(comparison, "right"))
+      let report = confined(dir, field(comparison, "report"))
+      assert_eq(
+        cli(target, ["compare-bom-scope", left, right], 3),
+        @fs.read_file(report).text(),
+      )
+    }
   }
   for entry in changes {
     for key in ["before", "after", "report"] {
@@ -425,6 +439,24 @@ async fn main {
           assert_true(bom.contains(field(entry, "ID")))
         }
         save(dir, file, bom, artifacts)
+        let baseline_file = stem + ".syft." + format + ".json"
+        save(
+          dir,
+          baseline_file,
+          @fs.read_file(confined(input, file)).text(),
+          artifacts,
+        )
+        let scope_file = file + ".scope-comparison.json"
+        save(
+          dir,
+          scope_file,
+          cli(
+            target,
+            ["compare-bom-scope", dir + "/" + baseline_file, dir + "/" + file],
+            3,
+          ),
+          artifacts,
+        )
         let bom_rows = []
         if format == "cdx" {
           let value = @json.parse(bom)
@@ -522,6 +554,11 @@ async fn main {
           artifacts,
         )
         cases.push({
+          "scope_comparison": {
+            "left": Json(baseline_file),
+            "right": Json(file),
+            "report": Json(scope_file),
+          },
           "project": Json(stem),
           "format": Json(format),
           "gate": Json(gate.to_int()),

@@ -147,6 +147,47 @@ async fn main {
   |> ignore
   run(target, ["check-cdx", "samples/missing.json", advisory], 2) |> ignore
   let bom = @fs.read_file("samples/cargo.cdx.json").text()
+  let scope = run(
+    target,
+    ["compare-bom-scope", "samples/cargo.cdx.json", "samples/cargo.spdx.json"],
+    0,
+  )
+  guard @json.parse(scope.stdout())
+    is {
+      "profile": "cargo-bom-scope-v1",
+      "counts": { "shared_instances": 1, .. },
+      ..
+    } else {
+    fail("Expected the same Cargo identity across formats")
+  }
+  run(
+    target,
+    [
+      "compare-bom-scope", "samples/cargo.cdx.json", "samples/cargo-fixed.cdx.json",
+    ],
+    3,
+  )
+  |> ignore
+  run(
+    target,
+    [
+      "compare-bom-scope", "samples/cargo.cdx.json", "samples/cargo-partial.cdx.json",
+    ],
+    3,
+  )
+  |> ignore
+  run(
+    target,
+    ["compare-bom-scope", "samples/cargo.cdx.json", "samples/missing.json"],
+    2,
+  )
+  |> ignore
+  run(
+    target,
+    ["compare-bom-scope", "samples/cargo.cdx.json", "samples/installed.json"],
+    2,
+  )
+  |> ignore
   @fs.write_file(path, @utf8.encode(bom.replace(old="\"1.6\"", new="\"1.7\"")))
   run(target, ["check-cdx", path, advisory], 1) |> ignore
   @fs.write_file(path, @utf8.encode(bom.replace(old="\"1.6\"", new="\"1.8\"")))

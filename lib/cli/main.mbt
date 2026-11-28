@@ -65,6 +65,7 @@ fn usage() -> String {
     #|  changes BEFORE.delivery.json CURRENT.delivery.json
     #|  check-cdx BOM.json ADVISORY.json [ADVISORY.json ...]
     #|  check-bom BOM.json ADVISORY.json [ADVISORY.json ...]
+    #|  compare-bom-scope LEFT.bom.json RIGHT.bom.json
     #|  capture-bom BOM.json ADVISORY.json [ADVISORY.json ...]
     #|  verify-bom BOM.delivery.json
     #|  changes-bom BEFORE.bom.delivery.json CURRENT.bom.delivery.json
@@ -80,6 +81,7 @@ fn usage() -> String {
     #|Reports and snapshots are JSON on stdout. Diagnostics are JSON on stderr.
     #|Exit: 0 not matched in supplied snapshot; 1 known version-range hit;
     #|      2 invalid input or usage; 3 incomplete assessment.
+    #|compare-bom-scope exits 0 for agreement or 3 for differences or unresolved rows.
     #|This tool evaluates version evidence, not exploitability or software safety.
     #|
   help
@@ -110,6 +112,15 @@ async fn snapshot_files(
 }
 
 ///|
+async fn read_scope_input(path : String, side : String) -> @audit.BomImport {
+  @audit.read_bom(read_file(path), origin=side) catch {
+    @audit.Invalid(code~, path~, message~) =>
+      raise @audit.Invalid(code~, path~, message=side + " BOM: " + message)
+    error => raise error
+  }
+}
+
+///|
 async fn execute(input : Array[String]) -> Int32 {
   let crates_io = input.get(1) == Some("--crates-io")
   if crates_io &&
@@ -132,6 +143,14 @@ async fn execute(input : Array[String]) -> Int32 {
     )
   }
   let args = if crates_io { [input[0]] + input[2:].to_owned() } else { input }
+  if args is ["compare-bom-scope", left, right] {
+    let comparison = @audit.compare_bom_scope(
+      read_scope_input(left, "left"),
+      read_scope_input(right, "right"),
+    )
+    println(comparison.to_json().stringify())
+    return comparison.exit_code()
+  }
   if (
       args.length() == 2 ||
       (args.length() == 4 && args[1] == "--expected-sha256")

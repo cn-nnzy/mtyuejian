@@ -103,6 +103,7 @@ moon run lib/cli -- help
 SPDX 的单一 Cargo PURL、外部文档和身份冲突规则见 [SPDX 接入](docs/spdx.md)。
 `capture-bom` / `verify-bom` 封存并核验完整 BOM 评估，未解析组件和原始元数据也随交付包保存，见 [BOM 交付](docs/bom-delivery.md)。
 `changes-bom` 比较两份完整交付包，显式报告组件身份解析变化、未知证据消失及格式迁移，见 [BOM 变化](docs/bom-changes.md)。
+`compare-bom-scope` 直接比较两份原始 BOM 的包身份与实例数量，并保留各侧未解析节点，见 [SBOM 范围比较](docs/bom-scope.md)。
 需要固定已经审阅的交付包或比较基线时，可传入独立保存的 SHA-256，阻止另一份有效交付包替换它，见 [摘要固定](docs/pins.md)。
 `aliases` / `aliases-bom` 按公告声明的标识关联来源，保留全部判定和不确定证据；真实 RustSec 与 GitHub 双源示例见 [别名审查](docs/alias-review.md)。
 `review` / `review-bom` 生成可读的 Markdown 审查报告，末尾包含完整交付包，便于审阅后核验和重放，见 [审查报告](docs/review-markdown.md)。报告生成成功返回 0，原始评估门禁在正文中保留。

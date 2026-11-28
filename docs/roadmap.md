@@ -47,6 +47,9 @@ receipts, with conservative profile-change deltas and a pinned independent oracl
 CycloneDX 1.7 input and empty-name BOM nodes are supported through the same
 restricted Cargo projection. Trivy 0.76.2 adds eight unmodified public-project
 BOM workflows, four comparisons and explicit accounting of producer scope gaps.
+The public SBOM scope comparison reconciles exact Cargo package multiplicities
+across producers and preserves unresolved source pointers. Real-project kits
+include both input sources and replay the resulting comparisons.
 
 ## Possible subsequent capabilities
 

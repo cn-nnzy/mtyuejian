@@ -52,6 +52,11 @@ catalog entries and exact lock name/version pairs not identified by Trivy. All
 native Trivy and complete Syft catalogs are retained for comparison. The scope
 difference is not silently treated as an adapter success or a complete inventory.
 
+The eight `*.scope-comparison.json` reports compare the original Syft and Trivy
+BOMs with the [public scope comparison](bom-scope.md). These reports cover
+resolved identity counts and preserve both sides' unresolved pointers.
+The kit retains both input BOMs and recomputes the reports during replay.
+
 The two selected RustSec records, historical interpretation and gates are those
 documented in the Syft workflow. Passing these cases does not establish complete
 vulnerability coverage, runtime inventory completeness or general Trivy compatibility.

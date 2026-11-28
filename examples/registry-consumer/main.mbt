@@ -12,5 +12,12 @@ fn main raise {
   assert_eq(restored.assessment().coverage().stringify(), receipt.assessment().coverage().stringify())
   assert_eq(@yuejian.read_snapshot(selected.to_json().stringify()).to_json().stringify(), selected.to_json().stringify())
   assert_true(restored.to_markdown().contains("crates-io-semver-v1"))
+  let first = @yuejian.read_bom(
+    "{\"bomFormat\":\"CycloneDX\",\"specVersion\":\"1.7\",\"components\":[{\"bom-ref\":\"a\",\"type\":\"library\",\"name\":\"demo\",\"version\":\"1.0.0\",\"purl\":\"pkg:cargo/demo@1.0.0\"}]}",
+  )
+  let second = @yuejian.read_bom(
+    "{\"spdxVersion\":\"SPDX-2.3\",\"SPDXID\":\"SPDXRef-DOCUMENT\",\"packages\":[{\"SPDXID\":\"SPDXRef-b\",\"name\":\"demo\",\"versionInfo\":\"1.0.0\",\"externalRefs\":[{\"referenceCategory\":\"PACKAGE-MANAGER\",\"referenceType\":\"purl\",\"referenceLocator\":\"pkg:cargo/demo@1.0.0\"}]}]}",
+  )
+  assert_eq(@yuejian.compare_bom_scope(first, second).exit_code(), 0)
   println("Independent consumer verified explicit crates.io ordering and receipt replay")
 }
